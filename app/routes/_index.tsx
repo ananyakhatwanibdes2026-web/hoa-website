@@ -22,6 +22,9 @@ const AboutSection = lazy(
 const BestSellersSection = lazy(
   () => import('~/components/sections/BestSellersSection'),
 );
+const CategoriesSection = lazy(
+  () => import('~/components/sections/CategoriesSection'),
+);
 // Renders children only after browser mount so React.lazy never fires on the server.
 function ClientOnly({children}: {children: React.ReactNode}) {
   const [mounted, setMounted] = useState(false);
@@ -79,7 +82,6 @@ function loadDeferredData({context}: Route.LoaderArgs) {
 }
 
 const PLACEHOLDER_SECTIONS = [
-  'CATEGORIES',
   'THE WHY',
   'CAMPAIGN',
   'LOOKBOOK',
@@ -155,6 +157,11 @@ export default function Homepage() {
         <ClientOnly>
           <Suspense fallback={<section style={{height: '100vh'}} />}>
             <BestSellersSection />
+          </Suspense>
+        </ClientOnly>
+        <ClientOnly>
+          <Suspense fallback={<section style={{height: '600vh'}} />}>
+            <CategoriesSection />
           </Suspense>
         </ClientOnly>
         {PLACEHOLDER_SECTIONS.map((label) => (

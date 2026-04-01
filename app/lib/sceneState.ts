@@ -17,3 +17,8 @@ export const scenePhaseState = {
   aboutIntensity: 0,
   transitionBlend: 0,
 };
+
+export const categoriesSectionState = {
+  active: false,
+  sectionProgress: 0,
+};

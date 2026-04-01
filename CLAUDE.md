@@ -54,7 +54,7 @@ House of an is a luxury contemporary jewellery e-commerce website built for clie
 - Bloom post-processing: luminanceThreshold 0.4, luminanceSmoothing 0.9, intensity 0.5 desktop / 0.3 mobile, radius 0.8
 - BackgroundPaths color sync: white at 0.12 on dark, transition 0.68-0.82, #222222 charcoal at 0.18 on silver. NormalBlending.
 - ParticleSpiral color sync: white at 0.55 on dark, transition 0.68-0.82, #222222 charcoal at 0.50 on silver. NormalBlending.
-- Cursor (ChromeCursor): SVG arrow pointer (22x31px, tip hot-spot at 2,1). Dark #06060e fill + iridescent animated stroke (CSS keyframe `chr-stroke` cycles purple->red->amber->teal->blue every 4s, injected into `<head>` as `#chrome-cursor-kf` style tag). Wrapper div has `cursor-glow` drop-shadow keyframe in sync. Velocity tilt: atan2(vy,vx) * 0.14 clamped ±14 deg. 14-element glass drop trail (9px, backdrop-filter blur 4px, pool cycling every 8px of movement).
+- Cursor (ChromeCursor): **REWRITTEN** -- dot + lagging ring design (NOT the old SVG arrow, do not revert). Chrome dot (7px, rgba(208,208,228,0.92)) snaps to mouse. Ring (28px) follows with lerp 0.11. On hover over a/button/input: ring scales 1.65x via CSS transition (0.28s cubic-bezier), border brightens. posRef wrapper holds position (no CSS transition), inner ringVisRef holds visual (CSS transition for scale/color only -- never mix RAF transform with CSS transition on the same element). 6-dot silver trail (3px, spawn every 12px, decay 0.038/frame). No RGB keyframes, no velocity tilt.
 
 ## File Structure
 app/
@@ -75,10 +75,16 @@ app/
       AboutSection.tsx         -- Editorial about layout. Left: "THE REFINED REBELLION" DM Sans 800, ~10.5vw, rgba(255,255,255,0.20). Right: Founded label + hairline divider + 2 body paragraphs. Dark radial gradient mask on right for legibility. ScrollTrigger scrub:1 (start:'top 78%', end:'bottom 5%'): left slides in x:-80->0, right items stagger y:20->0, exit fade+y:-32 at 88% progress. Mobile: left anchored top 18%, right bottom 10%.
       BestSellersSection.tsx   -- Parent HTML for Bestsellers: title, subtitle, product name, dot indicators, touch swipe, animating ref. No arrow buttons. `goToCard(index)` rotates to any card via shortest-path GSAP (power3.inOut, 1.0s). Lazy-loads BestSellersCarousel via React.lazy + ClientOnly + Suspense. No background overlay div (transparent, global SceneCanvas shows through).
       BestSellersCarousel.tsx  -- Self-contained R3F Canvas for 3D carousel. 5 CarouselCards on a FIXED camera-aligned ellipse (RADIUS 3.8, Z_FLATTEN 0.42). Each card computes worldAngle = baseAngle + rotStateRef.angle per frame. Auto-rotation (AUTO_SPEED 0.003 rad/frame), pauses only during GSAP tweens (animatingRef -- NO hover-pause). Canvas pointerEvents: auto (raycasting enabled). Cards have hover glow (additive RoundedBox, opacity lerps 0->0.28) + onClick -> onCardClick(index). Exports createRotationHandlers, CARDS, CARD_TITLES.
+      CategoriesSection.tsx    -- Fullscreen pinned scroll gallery for 3 earring product lines (Edge, Sculpt, Elite). Pure HTML/CSS/GSAP -- no R3F. Outer div 600vh desktop / 480vh mobile creates scroll space. Inner div position:sticky top:0 height:100vh. 3 panels (z:1/2/3), panels 2+3 start translateX(100%) and wipe in with a 2px chrome leading-edge line. Split layout: 45% left text (Cormorant name + DM Sans num/tagline/cta) / 55% right image frame (portrait 3:4, gradient placeholder + real img on top). GSAP scrub:2 timeline: frame2Ref animates as its own tween at 0.50 (NOT in stagger array with text -- stagger bug caused image to appear after text exit). Text stagger 0.01 so all 5 items land before exit at 0.62. Image files: /images/categories/edge1.jpg, sculpt2.jpg, elite3.jpg. Progress dots: 3 pills, active 20px, inactive 5px, CSS transition. categoriesSectionState added to sceneState.ts.
   lib/
-    sceneState.ts              -- Plain JS shared state objects for cross-module communication: aboutSectionState {active, sectionProgress}, bestsellersSectionState {active, sectionProgress}, scenePhaseState {heroIntensity, aboutIntensity, transitionBlend}. No React dependency.
+    sceneState.ts              -- Plain JS shared state objects for cross-module communication: aboutSectionState {active, sectionProgress}, bestsellersSectionState {active, sectionProgress}, scenePhaseState {heroIntensity, aboutIntensity, transitionBlend}, categoriesSectionState {active, sectionProgress}. No React dependency.
   routes/
-    _index.tsx                 -- Homepage: renders EntrancePreloader + scrollable HTML overlay (HeroSection + AboutSection + BestSellersSection + placeholder sections). SceneCanvas no longer here (moved to root.tsx).
+    _index.tsx                 -- Homepage: renders EntrancePreloader + scrollable HTML overlay (HeroSection + AboutSection + BestSellersSection + CategoriesSection + placeholder sections for THE WHY / CAMPAIGN / LOOKBOOK / TESTIMONIALS + FOOTER). SceneCanvas no longer here (moved to root.tsx).
+  images/
+    categories/
+      edge1.jpg                -- Edge earring collection photo (added by client)
+      sculpt2.jpg              -- Sculpt earring collection photo (added by client)
+      elite3.jpg               -- Elite earring collection photo (added by client)
   styles/
     fonts.css                  -- Font CSS variables
     global-effects.css         -- Design system CSS vars (--bg-primary: #0a0a0a), Lenis classes, cursor hide
@@ -215,12 +221,17 @@ SceneCanvas is a GLOBAL component in root.tsx Layout, persisting across ALL rout
 - GSAP rotState.angle accumulates continuously (sin/cos periodic, no modulo jump)
 - Canvas `pointerEvents: auto` -- required for R3F raycasting (onPointerEnter/Leave/Click on meshes)
 
-### 6. Categories (playing card deal animation)
-- Cards deal out like playing cards on scroll, fanning with rotation
-- 7 categories: Earrings, Rings, Necklaces, Bracelets, Ear Cuffs, Hoops, Pods
-- Floating animation, 3D tilt on hover, pulsing border
-- Real category images from Shopify collections
-- Background starts transitioning lighter from this section
+### 6. Categories (BUILT -- pinned scroll gallery, 3 product lines)
+- **Implemented as**: fullscreen pinned scroll gallery for 3 earring lines: Edge, Sculpt, Elite (client revised scope from 7 generic categories to 3 specific product lines with real photography)
+- CSS sticky pinning: 600vh outer / 100vh sticky inner. No GSAP pin. Pure HTML/CSS/GSAP.
+- 3 panels reveal sequentially on scroll via translateX wipe + chrome leading-edge sweep
+- Split layout: left text (Cormorant name, DM Sans number/tagline/CTA) / right image frame (3:4 portrait)
+- Real images: /public/images/categories/edge1.jpg, sculpt2.jpg, elite3.jpg
+- Gradient placeholders (silver for Edge/Sculpt, gold for Elite) shown until real images load
+- GSAP scrub:2. Key timing lesson: frameRef must be its own tween, NOT in the text stagger array
+- Progress dots at bottom center (3 pills, CSS transition on width)
+- `categoriesSectionState` in sceneState.ts
+- Background starts transitioning lighter from this section (scroll ~0.50-0.65)
 
 ### 7. The Why (simple section, no crazy 3D)
 - Two-column grid layout
