@@ -10,13 +10,26 @@ import {
   ScrollRestoration,
   useRouteLoaderData,
 } from 'react-router';
+import {lazy, Suspense, useState, useEffect} from 'react';
 import type {Route} from './+types/root';
 import favicon from '~/assets/favicon.svg';
 import {FOOTER_QUERY, HEADER_QUERY} from '~/lib/fragments';
 import resetStyles from '~/styles/reset.css?url';
 import appStyles from '~/styles/app.css?url';
 import tailwindCss from './styles/tailwind.css?url';
+import globalEffectsCss from '~/styles/global-effects.css?url';
+import fontsCss from '~/styles/fonts.css?url';
 import {PageLayout} from './components/PageLayout';
+import {GlobalEffects} from '~/components/global/GlobalEffects';
+import {Navigation} from '~/components/global/Navigation';
+
+const SceneCanvas = lazy(() => import('~/components/global/SceneCanvas'));
+
+function ClientOnly({children}: {children: React.ReactNode}) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  return mounted ? <>{children}</> : null;
+}
 
 export type RootLoader = typeof loader;
 
@@ -150,6 +163,19 @@ export function Layout({children}: {children?: React.ReactNode}) {
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width,initial-scale=1" />
+        {/* Fonts: Cormorant Garamond + DM Sans */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link
+          rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossOrigin="anonymous"
+        />
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700&display=swap"
+        />
+        <link rel="stylesheet" href={fontsCss} />
+        <link rel="stylesheet" href={globalEffectsCss} />
         <link rel="stylesheet" href={tailwindCss}></link>
         <link rel="stylesheet" href={resetStyles}></link>
         <link rel="stylesheet" href={appStyles}></link>
@@ -157,6 +183,13 @@ export function Layout({children}: {children?: React.ReactNode}) {
         <Links />
       </head>
       <body>
+        <GlobalEffects />
+        <Navigation />
+        <ClientOnly>
+          <Suspense fallback={null}>
+            <SceneCanvas />
+          </Suspense>
+        </ClientOnly>
         {children}
         <ScrollRestoration nonce={nonce} />
         <Scripts nonce={nonce} />
@@ -178,9 +211,7 @@ export default function App() {
       shop={data.shop}
       consent={data.consent}
     >
-      <PageLayout {...data}>
-        <Outlet />
-      </PageLayout>
+      <Outlet />
     </Analytics.Provider>
   );
 }

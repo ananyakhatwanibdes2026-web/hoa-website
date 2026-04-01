@@ -21,17 +21,26 @@ export default defineConfig({
   ssr: {
     optimizeDeps: {
       /**
-       * Include dependencies here if they throw CJS<>ESM errors.
-       * For example, for the following error:
-       *
-       * > ReferenceError: module is not defined
-       * >   at /Users/.../node_modules/example-dep/index.js:1:1
-       *
-       * Include 'example-dep' in the array below.
+       * Only include packages that genuinely need CJS->ESM pre-bundling for SSR.
+       * Browser-only packages (three, R3F, drei, fflate, three-stdlib) must NOT
+       * appear here -- they live in ssr.external below.
        * @see https://vitejs.dev/config/dep-optimization-options
        */
-      include: ['set-cookie-parser', 'cookie', 'react-router'],
+      include: ['scheduler'],
     },
+    // These packages are browser-only and must never be bundled into the SSR build.
+    // Marking them external tells Vite to skip them entirely during SSR analysis.
+    // They are safe to skip because all 3D components are loaded exclusively via
+    // React.lazy behind a ClientOnly gate -- the dynamic import never fires on the server.
+    external: [
+      'three',
+      '@react-three/fiber',
+      '@react-three/drei',
+      '@react-three/postprocessing',
+      'postprocessing',
+      'three-stdlib',
+      'fflate',
+    ],
   },
   server: {
     allowedHosts: ['.tryhydrogen.dev'],

@@ -1,0 +1,9 @@
+/*
+  Google Fonts are loaded via <link> tags in app/root.tsx for optimal performance.
+  This file defines the font family CSS custom properties.
+*/
+
+:root {
+  --font-display: 'Cormorant Garamond', serif;
+  --font-body: 'DM Sans', sans-serif;
+}

@@ -1,6 +1,6 @@
 import {Await, useLoaderData, Link} from 'react-router';
 import type {Route} from './+types/_index';
-import {Suspense} from 'react';
+import {Suspense, lazy, useState, useEffect, useRef} from 'react';
 import {Image} from '@shopify/hydrogen';
 import type {
   FeaturedCollectionFragment,
@@ -8,6 +8,26 @@ import type {
 } from 'storefrontapi.generated';
 import {ProductItem} from '~/components/ProductItem';
 import {MockShopNotice} from '~/components/MockShopNotice';
+
+// Dynamic imports -- three/R3F/drei/fflate never enter the SSR bundle.
+const EntrancePreloader = lazy(
+  () => import('~/components/sections/EntrancePreloader'),
+);
+const HeroSection = lazy(
+  () => import('~/components/sections/HeroSection'),
+);
+const AboutSection = lazy(
+  () => import('~/components/sections/AboutSection'),
+);
+const BestSellersSection = lazy(
+  () => import('~/components/sections/BestSellersSection'),
+);
+// Renders children only after browser mount so React.lazy never fires on the server.
+function ClientOnly({children}: {children: React.ReactNode}) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  return mounted ? <>{children}</> : null;
+}
 
 export const meta: Route.MetaFunction = () => {
   return [{title: 'Hydrogen | Home'}];
@@ -58,14 +78,116 @@ function loadDeferredData({context}: Route.LoaderArgs) {
   };
 }
 
+const PLACEHOLDER_SECTIONS = [
+  'CATEGORIES',
+  'THE WHY',
+  'CAMPAIGN',
+  'LOOKBOOK',
+  'TESTIMONIALS + FOOTER',
+];
+
 export default function Homepage() {
   const data = useLoaderData<typeof loader>();
+
+  useEffect(() => {
+    let ctx: any;
+    Promise.all([
+      import('gsap').then((m) => m.gsap),
+      import('gsap/ScrollTrigger').then((m) => m.ScrollTrigger),
+    ]).then(([gsap, ScrollTrigger]) => {
+      gsap.registerPlugin(ScrollTrigger);
+      ctx = gsap.context(() => {
+        gsap.utils.toArray<HTMLElement>('.hoa-section-label').forEach((el) => {
+          gsap.fromTo(
+            el,
+            {opacity: 0, y: 20},
+            {
+              opacity: 1,
+              y: 0,
+              duration: 0.9,
+              ease: 'power2.out',
+              scrollTrigger: {
+                trigger: el,
+                start: 'top 80%',
+                toggleActions: 'play none none none',
+              },
+            },
+          );
+        });
+      });
+    });
+    return () => ctx?.revert();
+  }, []);
+
   return (
-    <div className="home">
-      {data.isShopLinked ? null : <MockShopNotice />}
-      <FeaturedCollection collection={data.featuredCollection} />
-      <RecommendedProducts products={data.recommendedProducts} />
-    </div>
+    <>
+      <ClientOnly>
+        <Suspense fallback={null}>
+          <EntrancePreloader />
+        </Suspense>
+      </ClientOnly>
+
+      {/* Scrollable HTML overlay */}
+      <div
+        style={{
+          position: 'relative',
+          zIndex: 1,
+          margin: '0 -1rem',
+        }}
+      >
+        {data.isShopLinked ? null : <MockShopNotice />}
+        <ClientOnly>
+          <Suspense
+            fallback={
+              <section
+                style={{height: '100vh', background: 'transparent'}}
+              />
+            }
+          >
+            <HeroSection />
+          </Suspense>
+        </ClientOnly>
+        <ClientOnly>
+          <Suspense fallback={<section style={{height: '100vh'}} />}>
+            <AboutSection />
+          </Suspense>
+        </ClientOnly>
+        <ClientOnly>
+          <Suspense fallback={<section style={{height: '100vh'}} />}>
+            <BestSellersSection />
+          </Suspense>
+        </ClientOnly>
+        {PLACEHOLDER_SECTIONS.map((label) => (
+          <section
+            key={label}
+            style={{
+              height: '100vh',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'transparent',
+              padding: 0,
+            }}
+          >
+            <span
+              className="hoa-section-label"
+              style={{
+                color: 'var(--text-primary, #ffffff)',
+                fontFamily: 'var(--font-display, "Cormorant Garamond", serif)',
+                fontSize: '3rem',
+                fontWeight: 300,
+                letterSpacing: '0.3em',
+                textTransform: 'uppercase',
+                display: 'inline-block',
+                opacity: 0,
+              }}
+            >
+              {label}
+            </span>
+          </section>
+        ))}
+      </div>
+    </>
   );
 }
 
