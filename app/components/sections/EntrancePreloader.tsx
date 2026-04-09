@@ -316,21 +316,21 @@ function Scene({isStarted, onComplete, fogRef, isMobile}: SceneProps) {
       <Stars
         radius={80}
         depth={60}
-        count={isMobile ? 500 : 1500}
-        factor={3}
+        count={isMobile ? 150 : 400}
+        factor={1.5}
         saturation={0}
         fade
-        speed={0.5}
+        speed={0.4}
       />
 
       <group position={[0, 0, -52.5]}>
         <Sparkles
-          count={isMobile ? 20 : 40}
+          count={isMobile ? 5 : 12}
           scale={[20, 20, 120]}
-          size={1.0}
-          speed={0.1}
+          size={0.4}
+          speed={0.08}
           color="#cccccc"
-          opacity={0.4}
+          opacity={0.12}
         />
       </group>
 

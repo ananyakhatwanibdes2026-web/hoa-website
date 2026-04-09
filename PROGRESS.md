@@ -151,8 +151,217 @@
   - 14-element glass drop trail: 9px backdrop-filter blur circles, spawn every 8px, fade ~0.025/frame
   - Keyframes injected as <style id="chrome-cursor-kf"> on mount, removed on unmount
 
-### Steps 19-23: Not started
-See ROADMAP.md -- Categories is next.
+### Step 19: Visual Polish (Sparkles, Color, Logo Dimming) [COMPLETE]
+- [x] AdaptiveSparkles: count 25->8 desktop / 10->3 mobile, size 1.2->0.35, opacity 0.3->0.07
+- [x] ParticleSpiral: count 4500->600 desktop / 1500->200 mobile, size 0.06->0.02, opacity 0.55->0.08
+- [x] EntrancePreloader Stars: count 1500->400 / 500->150, Sparkles: 40->12 / 20->5
+- [x] Background color: #0f0a1e purple -> #0a0e1a blackish-blue (BackgroundJourney, global-effects.css, body, BestSellersCarousel palette)
+- [x] Logo dimmed: color #c8c8c8->#a8a8a8, envMapIntensity 2.5->1.2, roughness 0.05->0.18, clearcoat 0.3->0.2
+- [x] Lightformer overhead: intensity 5->3.5, breathing range +/-0.5 -> +/-0.3
+- [x] Bloom: luminanceThreshold 0.4->0.7, luminanceSmoothing 0.9->0.6, radius 0.8->0.6, intensity 0.5->0.15 desktop / 0.3->0.10 mobile
+
+### Step 20: About Section Redesign [COMPLETE]
+- [x] Sequential word reveal: "THE", "REFINED", "REBELLION" appear one-by-one on scroll (GSAP timeline positions 0.0, 0.15, 0.30)
+- [x] Tagline highlight: rgba(255,255,255,0.20) -> 0.55, added 3-layer bluish-black textShadow glow
+- [x] Glass card removed: no backdrop-filter box, right-side text presented cleanly
+- [x] "Founded in 2012..." text appears with first word ("THE"), not after last word
+
+### Step 21: Bestsellers Scroll-Driven Rotation [COMPLETE]
+- [x] Auto-rotation removed (AUTO_SPEED constant and useFrame auto-rotate block deleted)
+- [x] ScrollTrigger added to BestSellersSection: trigger section, start:'top top', end:'bottom bottom', scrub:1
+- [x] Scroll maps to rotStateRef.angle, cards rotate 1-2-3-4-5 sequentially on scroll
+- [x] Section height: 100vh -> 300vh with position:sticky inner wrapper (100vh)
+- [x] Card dimensions tuned: frame 2.8x4.0, glow 2.95x4.15, image 2.56x3.76, texture 440x660
+- [x] _index.tsx BestSellers fallback height: 100vh -> 300vh
+
+### Step 22: Categories Rewrite [COMPLETE]
+- [x] Removed pinned horizontal-slide panels (600vh outer, sticky inner, translateX wipes, progress dots)
+- [x] Replaced with vertical stacked cards in normal document flow
+- [x] Scrub-based entrance: text from x:-60, image from x:+60 (ScrollTrigger scrub:1)
+- [x] Image parallax: y:30 to y:-30 across card scroll range
+- [x] Number parallax: y:20 to y:-20 for depth effect
+- [x] Chrome divider elements between cards (gradient 1px line, scaleX:0->1 on scroll)
+- [x] "COLLECTIONS" header at top with fade-in
+- [x] Flush edges: gap 0, padding 0, border-radius 0
+
+### Step 23: Background Elements Spread [COMPLETE]
+- [x] BackgroundPaths: xBias widened from +-5/10 to +-8/16, amplitude 10-19, spanY 40-52 (corner-to-corner coverage)
+- [x] BackgroundPaths mouse range: mouseLerp.x * 14 -> * 20
+- [x] ParticleSpiral: MIN_RADIUS 3->5, MAX_RADIUS 18->26, CLEAR_RADIUS 3.5->5.0
+- [x] ParticleSpiral mouse range: mouseLerp.x * 16 -> * 22
+
+### Step 24: Side Edge Blobs [COMPLETE]
+- [x] 6 new liquid metal blobs added to BLOB_CONFIGS (3 left at x=-9.5/-10/-11, 3 right at x=+9.5/+10/+11)
+- [x] Side blobs at z=-1 to -3 (close to camera for correct horizontal fov placement)
+- [x] Scale 0.7-0.9 (smaller than center blobs, appear ambient)
+- [x] Mobile slicing: 2 center + 1 left + 1 right = 4 total
+- [x] Key lesson: fov=75 is vertical, horizontal edge at 16:9 is ~1.37x distance, so x=+-9.5/11 needed (not +-6/7)
+
+### Step 25: Cursor Redesign [COMPLETE]
+- [x] ChromeCursor rewritten: dot (7px) + lagging ring (28px, lerp 0.11) design
+- [x] Ring scales 1.65x on hover over interactive elements via CSS transition
+- [x] 6-dot silver trail (3px, spawn every 12px, decay 0.038/frame)
+- [x] No RGB keyframes, no velocity tilt (clean, minimal)
+
+### Step 26: The Why Section [COMPLETE]
+- [x] WhySection.tsx built: two-column editorial layout
+  - Left: "WHY / HOUSE OF / AN ?" stacked heading (Cormorant Garamond 700, clamp 3.2-7rem, white glow textShadow 3-layer)
+  - Right: "Founded in 2024" label + hairline divider + 2 body paragraphs (DM Sans 300, uppercase, 0.55 opacity)
+  - GSAP scrub: left from x:-80, right from x:+80 (start:'top 85%', end:'top 25%', scrub:1, stagger 0.06)
+  - Mobile: column layout, centered text, 6vh gap
+- [x] whySectionState added to sceneState.ts ({active, sectionProgress}), updated via ScrollTrigger in WhySection
+- [x] latePageFade added to scenePhaseState in sceneState.ts
+  - ScenePhaseDriver drives latePageFade via smoothstep(0.58, 0.68) on scroll progress
+  - LogoModel: material opacity lerps to 0, rotation slows to stop as latePageFade rises
+  - BackgroundPaths + ParticleSpiral: opacity multiplied by (1 - latePageFade)
+  - Clears global 3D spectacle before the Why section for text legibility
+- [x] WhyStillLogo.tsx created (local R3F Canvas with still AN_Logo.glb)
+  - Separate from global SceneCanvas: no scroll rotation, breathing scale only (sin(t*0.35)*0.015)
+  - Own Environment + Lightformers (overhead 2.8, left lavender 1.2, right neutral 1.4)
+  - Chrome material: color #c4c4d4, metalness 1.0, roughness 0.14, envMapIntensity 1.35
+  - Letter meshes spread apart (x+-0.28) for visual openness
+  - NOT YET WIRED IN: component exists but not imported/rendered in WhySection or _index.tsx
+- [x] _index.tsx updated: WhySection rendered after Categories in separate wrapper div
+- [x] "THE WHY" removed from PLACEHOLDER_SECTIONS (now only CAMPAIGN, LOOKBOOK, TESTIMONIALS + FOOTER)
+- [x] CategoriesSection decoupled from categoriesSectionState (import removed from component)
+
+### Step 27: Campaign Section [COMPLETE]
+- [x] CampaignSection.tsx built: 3-card physical-photo stack, CSS sticky pinning (600vh outer / 100vh sticky inner)
+- [x] Card 1 (top, light grey #e8e8e8, 0deg): "-- 01" eyebrow + "Campaign 01" Cormorant Garamond title bottom-left
+- [x] Card 2 (middle, dark slate blue #1e2d3d): +2.5deg rotation, +10px right offset
+- [x] Card 3 (bottom, cream #f5f0e8): -2deg rotation, -8px left offset
+- [x] GSAP timeline (paused:true, 4 units): Card 1 flies upper-left (-130%x, -90%y, -28deg), Card 2 flies upper-right (+130%x, +22deg), Card 3 settles straight
+- [x] 0.5-unit pauses between steps (+=0.5) so each card fully exits before next starts (~125vh per card peel)
+- [x] ScrollTrigger: trigger section, start:'top top', end:'bottom bottom', scrub:1, animation:tl
+- [x] campaignSectionState added to sceneState.ts ({active, sectionProgress})
+- [x] Top-level gsap import (same pattern as BestSellersSection, NOT dynamic Promise.all)
+- [x] _index.tsx: lazy import + ClientOnly + Suspense (600vh fallback), CAMPAIGN removed from PLACEHOLDER_SECTIONS
+
+### Step 28: Lookbook Section [COMPLETE]
+- [x] LookbookSection.tsx built: horizontal focal gallery, CSS sticky pinning (700vh outer / 100vh sticky inner)
+- [x] Left column (flex 32%): "The Collection" eyebrow (DM Sans, 0.35em tracking) + "SO PORTABLE, it's wearable" heading (Cormorant Garamond 700, italic, clamp 2.8-5rem)
+- [x] Right gallery (flex 68%): overflow:hidden clips horizontal track as it translates
+- [x] 6 image slots (flex: 0 0 clamp(300px, 48vw, 640px), height clamp(360px, 68vh, 540px)) with placeholder warm-tone backgrounds
+- [x] Focal effect: active image scale:1 opacity:1, inactive scale:0.65 opacity:0.35. Transitions driven by GSAP timeline.
+- [x] DOM-measured initialX: galleryW/2 - slotW/2 (centres image 0 in gallery area on mount)
+- [x] GSAP timeline (paused:true, 5 units): track slides left (ease:none, duration:5) + per-transition scale/opacity pairs (ease:none, duration:1, timed at i)
+- [x] ScrollTrigger: scrub:1, animation:tl, start:'top top', end:'bottom bottom'. 600vh scrub / 5 units = 120vh per image.
+- [x] "Scroll to continue" hint: position:absolute, bottom:32px, centered, DM Sans 10px
+- [x] Section has own opaque background (linear-gradient dark brown #1a120a -> #0d0906) -- overrides global color journey
+- [x] lookbookSectionState added to sceneState.ts ({active, sectionProgress})
+- [x] _index.tsx: lazy import + ClientOnly + Suspense (700vh fallback), LOOKBOOK removed from PLACEHOLDER_SECTIONS
+
+### Step 29: Testimonials + Footer Section [COMPLETE]
+- [x] TestimonialsFooterSection.tsx built: combined testimonials grid + MISHO-style footer in single section
+- [x] Testimonials zone: chrome radial-gradient background (#2a2a3a -> #0a0e1a), "WHAT THEY SAY" title (Cormorant Garamond 300, 0.3em tracking)
+- [x] Responsive testimonial grid: 1 col mobile, 2 col md, 3 col lg
+- [x] TestimonialCard.tsx: polaroid-style cards with random tilt (+-2 to +-5 deg), white border (20px sides, 24px bottom for author), subtle grain texture
+- [x] Card hover: scale(1.08) translateY(-8px) 0.35s cubic-bezier(0.23,1,0.32,1), box-shadow deepens rgba(0,0,0,0.4) 0 25px 50px
+- [x] Quote text: Cormorant Garamond italic. Author: DM Sans 600. Role: DM Sans 300, rgba(0,0,0,0.5)
+- [x] GSAP stagger entrance: y:60 opacity:0 -> y:0 opacity:1, stagger 0.12, ScrollTrigger scrub:1
+- [x] 6 placeholder testimonials (real quotes from client TBD)
+- [x] FooterBlock.tsx: reusable column component (title, links array, children for custom content)
+- [x] Footer: MISHO-style 5-column grid (About+socials, Shop, Support, Explore, Newsletter)
+- [x] Social icons: Instagram, Twitter/X, Pinterest, LinkedIn (inline SVG paths)
+- [x] Newsletter: email input + chrome gradient submit button (linear-gradient #666->#999)
+- [x] Ghost AN watermark: Cormorant Garamond 15vw, opacity 0.03, centered behind footer
+- [x] Two decorative SVG arc lines (200px tall, stroke rgba(255,255,255,0.06))
+- [x] Footer bottom bar: copyright + "Designed by House of An" + payment icons placeholder
+- [x] testimonialsSectionState added to sceneState.ts ({active, sectionProgress})
+- [x] _index.tsx: lazy import + ClientOnly + Suspense (120vh fallback), PLACEHOLDER_SECTIONS removed entirely
+
+### Step 30: Visual Tuning Pass [COMPLETE]
+- [x] latePageFade thresholds shifted: smoothstep(0.55, 0.64) -> smoothstep(0.24, 0.30) in ScenePhaseDriver (SceneCanvas.tsx)
+- [x] latePageFade lerp damping: 0.10 -> 0.15 for faster convergence
+- [x] Purpose: global 3D elements (AN_Logo, liquid blobs, floating orbs) now fade out right after Bestsellers, before Categories section begins
+- [x] Threshold derived from page structure analysis: total ~2500vh, Bestsellers ends at sp ~0.26
+- [x] Bestseller carousel cards scaled 1.3x: frame 2.8x4.0 -> 3.64x5.2, image 2.56x3.76 -> 3.33x4.89, glow 2.95x4.15 -> 3.84x5.4
+- [x] Carousel RADIUS: 3.8 -> 4.5 (breathing room for larger cards)
+- [x] Corner radii updated: frame 0.10 -> 0.13, glow 0.12 -> 0.16
+- [x] About-to-Bestsellers spacer: 125vh empty div in _index.tsx (placeholder for future transition element)
+- [x] AN Logo rotation speed doubled: smoothSp * Math.PI * 16 -> smoothSp * Math.PI * 32
+
+### Step 31: Scroll Transitions + Logo Fade Tuning [COMPLETE]
+- [x] BestSellers background wipe: Active Theory-style bottom-to-top clip-path reveal. position:fixed div with dark radial gradient, driven by GSAP ScrollTrigger scrub:0.4
+- [x] Wipe starts at 'top bottom+=13%', ends at 'top 20%' (headroom above "BESTSELLERS" heading)
+- [x] Second ScrollTrigger manages display:none toggling for the fixed wipe div
+- [x] TransitionBridge REMOVED from SceneCanvas (chrome torus/ring that pulsed mid-scroll)
+- [x] logoFade added to scenePhaseState: driven by aboutSectionState.sectionProgress
+- [x] Logo fade formula: clamp01((sectionProgress - 0.45) / 0.35) -- starts fading after "REBELLION" appears, fully gone before About exit
+- [x] AN_Logo reads logoFade for opacity (1 - logoFade) and rotation slowdown (1 - logoFade * 0.97)
+- [x] Logo rotation speed doubled again: smoothSp * Math.PI * 64 (4x from original 16)
+- [x] About-to-Bestsellers spacer reduced: 125vh -> 63vh in _index.tsx
+- [x] BestSellers wipe ScrollTrigger start adjusted: 'top bottom+=25%' -> 'top bottom+=13%' to match halved spacer
+
+### Step 32: Bestsellers Visual Polish [COMPLETE]
+- [x] About-to-Bestsellers spacer reduced: 63vh -> 31.5vh in _index.tsx
+- [x] BestSellers wipe gradient updated: dark navy radial-gradient -> premium silver (`radial-gradient(ellipse at 50% 30%, #d4d4dc, #a8a8b4, #78788a, #3a3a48)`)
+- [x] CenterSpiral component added to BestSellersCarousel.tsx
+  - Loads Spiral.glb via useGLTF with '/draco/' decoder
+  - Silver chrome MeshPhysicalMaterial (color #d8d8e0, metalness 0.82, roughness 0.15, envMapIntensity 5.0, clearcoat 0.8)
+  - Position [0, -0.5, 0], scale [1.2, 3.5, 1.2] (slim XZ, tall Y)
+  - Slow Y-axis rotation (0.002 rad/frame) + subtle sine bob around base Y (-0.5)
+- [x] Two pointLights added at [5,5,5] and [-5,-5,5] (intensity 3) for studio-style highlights on chrome
+- [x] Carousel Environment boosted: resolution 128 -> 256, 5 Lightformers (overhead 8 wide, left/right 4, bottom 3, front fill 5 wide)
+- [x] CenterSpiral scale/position tuning: useFrame position.y bug fixed (was overwriting base position with absolute sin value oscillating around 0 instead of -0.5), non-uniform scale [1.2, 3.5, 1.2] preserves spiral shape while filling viewport
+
+### Step 33: Bloom Removal + Chrome Material Polish [COMPLETE]
+- [x] Bloom post-processing DISABLED: intensity zeroed in both useFrame (bloomRef.current.intensity = 0) and JSX (intensity={0})
+- [x] EffectComposer upgraded: added multisampling={4} for smoother geometry edges
+- [x] Bloom algorithm: added mipmapBlur for optically smooth blur (in case bloom is re-enabled later)
+- [x] Bloom thresholds tightened: luminanceThreshold 0.7 -> 0.98, luminanceSmoothing 0.6 -> 0.02
+- [x] AdaptivePostFX useFrame simplified: removed heroIntensity/latePageFade computation, just sets intensity=0
+- [x] AN_Logo chrome material polished: roughness 0.18 -> 0.12, clearcoatRoughness 0.1 -> 0.06 (sharper reflections without bloom glow)
+
+### Session 2026-04-04: UI Polish + Heading Interaction System [COMPLETE]
+
+- [x] **Categories background color** changed from blue-tinted `#0a0e17 / #050b14` to smoked titanium `#18181b / #09090b` (sticky wrapper + each panel bg)
+- [x] **Inner border overlay** added to all 3 category panels: `absolute inset-0 border-[1.5px] border-white/10 rounded-2xl z-10`, hover brightens to `border-white/50` with `shadow-[inset_0_0_40px_rgba(0,0,0,0.6)]`. Panels have `className="group"` (Tailwind group-hover pattern)
+- [x] **"HOUSE OF AN COLLECTIONS" heading** added above accordion: DM Sans eyebrow "House of An" + Cormorant Garamond weight 200 "Collections" + hairline rule. Accordion height reduced 80vh -> 74vh to fit.
+- [x] **"LOOKBOOK" heading** added above campaign card stack: eyebrow "The Visual" + Cormorant Garamond weight 200. CSS hover: letter-spacing 0.38em -> 0.52em, eyebrow brightens, hairline rule grows 0 -> 44px
+- [x] **Unified interactive heading system** across 5 sections:
+  - Tier 1 (character wave): BESTSELLERS, COLLECTIONS, LOOKBOOK -- each letter wrapped in `<span>` with staggered `transition-delay: i*35ms`, `translateY(-5px)` on hover, spring easing `cubic-bezier(0.34,1.56,0.64,1)`. Eyebrow tracking expands. Hairline rule sweeps to 44px.
+  - Tier 2 (glow + tracking): WHY HOUSE OF AN, SO PORTABLE -- letter-spacing expands, text-shadow intensifies, color lifts, hairline rule reveals. GSAP refs preserved (no character splitting).
+- [x] **BESTSELLERS** header: `pointerEvents: 'none'` removed so hover works. `<style>` block with `.bs-hdg-wrap` / `.bs-ch` / `.bs-rule` / `.bs-eyebrow`. Character split via `'BESTSELLERS'.split('').map(...)`.
+- [x] **COLLECTIONS** heading: refactored from full inline styles to CSS classes `.cat-hdg-wrap` / `.cat-ch` / `.cat-rule`. Character split for "COLLECTIONS".
+- [x] **WhySection** text colors changed from white to warm dark (`#1c1914`, `rgba(28,25,20,0.65)`) for readability on pearl light background. Hover adds tracking + glow + `.why-hdg-rule` hairline.
+- [x] **SO PORTABLE** heading: `.lookbook-left:hover` triggers glow intensification, eyebrow brightens + tracking expands, `.lookbook-rule` hairline reveals.
+- [x] **Background journey -- Why + Campaign split**:
+  - `_index.tsx`: Why and Campaign merged into one wrapper (`lightSectionsRef`) with two absolute overlay divs (pearl + titanium). Then refactored again into two separate wrappers (`whyWrapperRef` + `campaignWrapperRef`) after bug where titanium overlay covered both sections.
+  - Pearl bg (`#FCFBF8 -> #F3F1EC -> #E8E6DF`): fades in as Why enters viewport (`top 75%` -> `top 15%`, scrub 1.5)
+  - Titanium bg (`#18181B -> #27272A`): fades in as Campaign enters (`top 80%` -> `top 20%`, scrub 1). Scoped to campaignWrapper so it never bleeds into Why section.
+
+### Step 34: Categories Section Full Rebuild -- Expanding Accordion [COMPLETE]
+- [x] CenterSpiral removed from BestSellersCarousel (Spiral.glb, useGLTF.preload, CenterSpiral component, <CenterSpiral /> in scene all deleted)
+- [x] BestSellers pagination dots repositioned: `bottom: '4%'` -> `bottom: '20%'` (closes visual gap between spiral base and dots)
+- [x] CategoriesSection.tsx completely rebuilt from vertical stacked cards to a horizontal expanding accordion
+- [x] Outer section: 300vh height (same as Bestsellers sticky pattern)
+- [x] Sticky wrapper: 100vh, dark gradient background (`#0a0e17 -> #050b14`), `display:flex; alignItems:center; justifyContent:center`
+- [x] Inner accordion frame: `80vw`, `max-width:1200px`, `80vh`, `borderRadius:24px`, glass aesthetic: `background:rgba(255,255,255,0.05)`, `border:1px solid rgba(255,255,255,0.10)`, `backdropFilter:blur(12px)`, deep box-shadow. `gap:16px`, `padding:16px`
+- [x] 3 panels: each `borderRadius:16px`, `border:1px solid rgba(255,255,255,0.15)`, `background:#0a0e17`, `overflow:hidden`. No shared border-left -- each card is a distinct floating element
+- [x] Width constants: `WIDE='60%'`, `NARROW='15%'`
+- [x] GSAP timeline (paused:true, 2 units): Step 1 (t=0-1) Panel 0 collapses 60->15%, Panel 1 expands 15->60%; Step 2 (t=1-2) Panel 1 collapses, Panel 2 expands. ScrollTrigger scrub:1, start:'top top', end:'bottom bottom'
+- [x] Text per panel: expanded text block (num, name, tagline, CTA link) fades opacity 0->1 when panel activates, vertical rotated label fades in for collapsed panels
+- [x] Panel images: absolutely positioned, `top:50%; left:50%; transform:translate(-50%,-50%) scale(0.82)`, `height:100%`, `width:45vw`, `maxWidth:800px`, `objectFit:cover`. `scale(0.82)` zooms out so full ear + product visible without letterboxing
+- [x] _index.tsx fallback height: 260vh -> 300vh
+
+### Session 2026-04-04 Part 2: About Section Restyle + Background Continuity [COMPLETE]
+
+- [x] **About font** changed to Bebas Neue 400 (letterSpacing: 0.04em). Replaced DM Sans 800. Bebas Neue + Nunito added to Google Fonts URL in `root.tsx`.
+- [x] **About text color** changed to `#ffffff` (was `rgba(255,255,255,0.55)`).
+- [x] **About textShadow** changed to white bloom glow: `0 0 20px rgba(255,255,255,0.8), 0 0 40px rgba(255,255,255,0.5), 0 0 80px rgba(255,255,255,0.2)` (was blue-tinted glow).
+- [x] **About black background overlay** (`blackBgRef`): `position:absolute; inset:0; z-index:-1; background:#000; opacity:0`. GSAP ScrollTrigger fades it in as section enters: `trigger=section, start='top 90%', end='top 25%', scrub:1`. Fires just before "THE" appears.
+- [x] **About floor glow**: `position:absolute; bottom:0; height:300px`. 4-stop gradient `rgba(255,255,255,0.14 -> 0.07 -> 0.025 -> transparent)`. NO `filter:blur` -- removed because blur filter creates GPU compositing layer that caused dark glitch patch under REBELLION text when combined with GSAP opacity animation on adjacent div.
+- [x] **31.5vh spacer** (About->Bestsellers) given `background: '#000000'`.
+- [x] **BestSellersSection `<section>` element** given `background: '#000000'` (was transparent, showed `#0a0e1a` SceneCanvas through it before the fixed silver wipe covered the viewport).
+
+**Debugging notes from this session:**
+- Original trigger for black bg was `wordsRef.current[2]` (REBELLION DOM position) -- fired too late, transition started mid-section. Fixed to use `section` as trigger.
+- `filter:blur(48px)` on floor glow div caused a dark artifact/glow patch under REBELLION text. Root cause: blur filter forces browser to create a separate GPU compositing layer; this interacted with the adjacent GSAP opacity animation on `blackBgRef` causing visual glitch. Fix: removed blur, used multi-stop gradient instead.
+
+**STILL PENDING -- About->Bestsellers gap:**
+- BestSellers wipe `start: 'top bottom+=13%'` was tuned for old 63vh spacer. With 31.5vh spacer, wipe only fires 18.5vh into the spacer and is 14% done when Bestsellers section enters viewport.
+- Fix needed: in `BestSellersSection.tsx` useEffect ~line 180, change `start: 'top bottom+=13%'` to `start: 'top bottom+=31.5%'` to fire at spacer start. Also update visTrigger start to match. Alternatively remove the spacer entirely.
 
 ## Phase 3: Inner Pages [NOT STARTED]
 ## Phase 4: Polish and Launch [NOT STARTED]

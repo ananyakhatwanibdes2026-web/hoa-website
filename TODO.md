@@ -1,36 +1,45 @@
 # HOUSE OF AN -- To Do
 
-## Recently Completed (2026-04-01)
-- [x] Navigation: 3D coin logo, liquid glass SVG filter, fixed + responsive, hamburger overlay menu
-- [x] About section refinements: liquid glass card, bigger body copy, logo section-awareness blend
-- [x] Bestsellers: 3D circular coverflow carousel (5 cards, chrome frames, CanvasTexture placeholders, touch swipe, dot indicators)
-- [x] Single-scene infinite scroll restructure (200vh hero, station camera, spectacle taper)
-- [x] Hero-to-About scene phase transition (ScenePhaseDriver, TransitionBridge, element attenuation)
-- [x] BestSellers refinements (fixed-ellipse, auto-rotation, outward facing cards, no dark box)
-- [x] BestSellers Polish + Cursor Redesign:
-  - Hover-to-stop removed; AUTO_SPEED 0.003 (faster)
-  - Arrow buttons removed (touch swipe + dots + card click remain)
-  - Card hover glow: additive RoundedBox behind each frame, lerp opacity 0->0.28
-  - Click-to-front: goToCard(index), shortest-path GSAP power3.inOut 1.0s
-  - ChromeCursor: SVG arrow pointer with iridescent animated stroke + velocity tilt ±14 deg + glass drop trail
+## Recently Completed (2026-04-04 Part 2)
+- [x] About section font: Bebas Neue 400, letterSpacing 0.04em (replaces DM Sans 800). Bebas Neue + Nunito added to Google Fonts URL in root.tsx
+- [x] About section text color: #ffffff with white bloom glow textShadow (20px/40px/80px rgba(255,255,255,0.8/0.5/0.2)) -- was bluish glow on rgba(255,255,255,0.55)
+- [x] About section black bg overlay (blackBgRef, position:absolute, inset:0, z:-1, #000) fades in via GSAP ScrollTrigger: trigger=section, start='top 90%', end='top 25%', scrub:1
+- [x] About section floor glow: position:absolute bottom:0 height:300px, 4-stop gradient, NO filter:blur (caused GPU compositing glitch)
+- [x] 31.5vh About->Bestsellers spacer: background #000000
+- [x] BestSellersSection section element: background #000000 (was transparent, showed #0a0e1a through it)
+
+## Recently Completed (2026-04-04)
+- [x] Categories panel inner border overlay (Tailwind `group` + `group-hover:border-white/50` + inset box-shadow)
+- [x] Categories background color: blue `#0a0e17` -> smoked titanium `#18181b / #09090b`
+- [x] "HOUSE OF AN COLLECTIONS" heading above accordion (DM Sans eyebrow + Cormorant display, hairline rule)
+- [x] "LOOKBOOK" heading above Campaign cards (eyebrow + display heading, hover letter-spacing + rule)
+- [x] Unified interactive heading system -- Tier 1 character wave: BESTSELLERS, COLLECTIONS, LOOKBOOK
+- [x] Unified interactive heading system -- Tier 2 glow+tracking: WHY HOUSE OF AN, SO PORTABLE ITS WEARABLE
+- [x] WhySection text colors dark (warm `#1c1914`) for pearl light background readability
+- [x] Background transitions: pearl gradient for Why section, titanium gradient for Campaign section
+- [x] Pearl (`#FCFBF8 -> #E8E6DF`) fades in as Why enters, scrub 1.5
+- [x] Titanium (`#18181B -> #27272A`) fades in as Campaign enters, scrub 1 -- scoped to campaignWrapper only
 
 ## Immediate
-- [ ] Visual QA: full scroll from entrance -> hero -> about -> bestsellers -> placeholders -> silver
-- [ ] Test card click-to-front on all 5 cards at various rotation states
-- [ ] Confirm hover glow visible on side/back cards, not just front
-- [ ] Check cursor arrow rendering across light/dark scroll zones
+- [ ] **About->Bestsellers gap** -- BestSellers wipe `start: 'top bottom+=13%'` was tuned for old 63vh spacer; spacer is now 31.5vh. Wipe is only 14% done when Bestsellers section enters viewport. Fix: adjust wipe start offset in `BestSellersSection.tsx` useEffect (line ~180) to `bottom+=31.5%` so it fires at the very start of the spacer, OR remove the spacer entirely and let the wipe run entirely within the BestSellers section.
+- [ ] **AN_Logo reflectivity** -- reduce from chrome mirror to matte silver: `metalness: 1.0 -> 0.4`, `roughness: 0.12 -> 0.45`, `envMapIntensity: 1.2 -> 0.5`, `clearcoat: 0.2 -> 0`. File: `app/components/global/SceneCanvas.tsx` ~line 149-155
+- [ ] Visual QA: full scroll pass -- verify pearl/titanium bg transitions feel seamless at Campaign seam
+- [ ] Verify Why text (#1c1914) reads well at mid-fade of pearl bg
 
 ## Next
-- [ ] Categories: playing card deal animation (7 categories: Earrings, Rings, Necklaces, Bracelets, Ear Cuffs, Hoops, Pods)
-- [ ] The Why: two-column grid, SVG line draw animations, 3 stats counter (12K+ Pieces, 97% Recycled Silver, 48H Dispatch)
-- [ ] Campaign: stacked card peel/slide reveal (moblinks.fr reference)
+- [ ] Wire in WhyStillLogo into WhySection (component exists at `app/components/sections/WhyStillLogo.tsx`, not imported)
+- [ ] Add 3 stat counters to Why section (12K+ Pieces, 97% Recycled Silver, 48H Dispatch)
+- [ ] Add SVG line draw animations to Why section
+- [ ] Replace testimonial placeholder quotes with real customer testimonials
+- [ ] Connect newsletter form in footer to Shopify
 
 ## Upcoming
-- [ ] Lookbook / As Seen On: infinite scroll marquee, slows on hover, fade edges
-- [ ] Testimonials: interactive pop-up style (NOT marquee), chrome radial gradient bg
-- [ ] Footer: MISHO-style 5-column (About+socials, Shop, Support, Explore, Newsletter)
 - [ ] Replace BestSellers CanvasTextures with real Shopify product images + GraphQL query
-- [ ] Post-processing: chromatic aberration (Bloom already done)
+- [ ] Replace Campaign placeholder card backgrounds with real shoot photos
+- [ ] Replace Lookbook placeholder slot backgrounds with real celeb/event photos
+- [ ] Post-processing: chromatic aberration (Bloom currently disabled, can be re-enabled via EffectComposer)
+- [ ] Fine-tune bg color journey once all sections are real (placeholders gone)
+- [x] Build About-to-Bestsellers scroll transition in the spacer zone (DONE -- clip-path wipe in BestSellersSection)
 
 ## Blocked (client content)
 - [ ] Real product photos/data

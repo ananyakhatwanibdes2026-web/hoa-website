@@ -7,12 +7,15 @@ interface ColorStop {
 }
 
 const COLOR_STOPS: ColorStop[] = [
-  {pos: 0.0,  bg: '#0f0a1e', text: '#ffffff'},
-  {pos: 0.25, bg: '#0f0a1e', text: '#ffffff'},
-  {pos: 0.50, bg: '#1e293b', text: '#ffffff'},
-  {pos: 0.68, bg: '#3a4a5c', text: '#ffffff'},
-  {pos: 0.82, bg: '#c0c0c0', text: '#111111'},
-  {pos: 1.0,  bg: '#c0c0c0', text: '#111111'},
+  {pos: 0.0,  bg: '#484858', text: '#ffffff'},  // silver start
+  {pos: 0.04, bg: '#0d1e38', text: '#ffffff'},  // deep sapphire blue after ~110vh
+  {pos: 0.09, bg: '#0d1e38', text: '#ffffff'},  // hold blue through hero midpoint
+  {pos: 0.13, bg: '#050505', text: '#ffffff'},  // fade to black by hero end
+  {pos: 0.25, bg: '#050505', text: '#ffffff'},  // hold black through about section
+  {pos: 0.50, bg: '#1c1c24', text: '#ffffff'},  // dark steel
+  {pos: 0.68, bg: '#383848', text: '#ffffff'},  // medium titanium
+  {pos: 0.82, bg: '#bebec0', text: '#111111'},  // polished silver
+  {pos: 1.0,  bg: '#bebec0', text: '#111111'},  // hold silver
 ];
 
 function hexToRgb(hex: string): [number, number, number] {

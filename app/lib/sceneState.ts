@@ -16,9 +16,31 @@ export const scenePhaseState = {
   heroIntensity: 1,
   aboutIntensity: 0,
   transitionBlend: 0,
+  latePageFade: 0,
+  logoFade: 0,
 };
 
 export const categoriesSectionState = {
+  active: false,
+  sectionProgress: 0,
+};
+
+export const whySectionState = {
+  active: false,
+  sectionProgress: 0,
+};
+
+export const campaignSectionState = {
+  active: false,
+  sectionProgress: 0,
+};
+
+export const lookbookSectionState = {
+  active: false,
+  sectionProgress: 0,
+};
+
+export const testimonialsSectionState = {
   active: false,
   sectionProgress: 0,
 };

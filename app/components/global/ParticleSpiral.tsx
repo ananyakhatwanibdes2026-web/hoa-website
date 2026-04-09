@@ -37,9 +37,9 @@ const mouseLerp = {x: 0, y: 0};
 // ---------------------------------------------------------------------------
 
 const TURNS = 6;
-const MIN_RADIUS = 3.0;
-const MAX_RADIUS = 18;
-const CLEAR_RADIUS = 3.5;
+const MIN_RADIUS = 5.0;
+const MAX_RADIUS = 26;
+const CLEAR_RADIUS = 5.0;
 const REPEL_RADIUS = 4.0;
 const REPEL_STRENGTH = 0.8;
 const TRANSITION_START = 0.68;
@@ -52,7 +52,7 @@ const Y_EXTENT = 20.0;
 // ---------------------------------------------------------------------------
 
 export function ParticleSpiral({isMobile}: {isMobile: boolean}) {
-  const count = isMobile ? 1500 : 4500;
+  const count = isMobile ? 200 : 600;
   const groupRef = useRef<THREE.Group>(null!);
   const pointsRef = useRef<THREE.Points>(null!);
   const scrollRef = useRef(0);
@@ -81,7 +81,7 @@ export function ParticleSpiral({isMobile}: {isMobile: boolean}) {
       positions[i * 3 + 1] = y;
       positions[i * 3 + 2] = z;
 
-      sizes[i] = 0.03 + Math.random() * 0.05;
+      sizes[i] = 0.008 + Math.random() * 0.012;
     }
 
     const geo = new THREE.BufferGeometry();
@@ -89,10 +89,10 @@ export function ParticleSpiral({isMobile}: {isMobile: boolean}) {
     geo.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
 
     const mat = new THREE.PointsMaterial({
-      size: 0.06,
+      size: 0.02,
       sizeAttenuation: true,
       transparent: true,
-      opacity: 0.55,
+      opacity: 0.08,
       blending: THREE.NormalBlending,
       depthWrite: false,
       color: new THREE.Color('#ffffff'),
@@ -114,7 +114,7 @@ export function ParticleSpiral({isMobile}: {isMobile: boolean}) {
     groupRef.current.rotation.y = scrollRef.current * Math.PI * 1.2;
     const tightness = 1.0 - scrollRef.current * 0.2;
 
-    const mouseWorldX = mouseLerp.x * 16;
+    const mouseWorldX = mouseLerp.x * 22;
     const mouseWorldY = mouseLerp.y * 10;
 
     // Seamless Y-wrapping offset driven by scroll
@@ -154,9 +154,9 @@ export function ParticleSpiral({isMobile}: {isMobile: boolean}) {
 
     posAttr.needsUpdate = true;
 
-    // Color inversion + intensity taper (hero=full, content=mist, silver approach=restore)
     const scroll = scrollRef.current;
     const heroIntensity = scenePhaseState.heroIntensity;
+    const lateMul = 1 - scenePhaseState.latePageFade * 0.85;
 
     let intensityFactor: number;
     if (scroll < 0.20) {
@@ -171,15 +171,15 @@ export function ParticleSpiral({isMobile}: {isMobile: boolean}) {
 
     if (scroll < TRANSITION_START) {
       material.color.set('#ffffff');
-      material.opacity = 0.55 * intensityFactor * lerp(0.24, 1.0, heroIntensity);
+      material.opacity = 0.08 * intensityFactor * lerp(0.24, 1.0, heroIntensity) * lateMul;
     } else if (scroll < TRANSITION_END) {
       const t =
         (scroll - TRANSITION_START) / (TRANSITION_END - TRANSITION_START);
       material.color.setRGB(1 - t * 0.87, 1 - t * 0.87, 1 - t * 0.87);
-      material.opacity = lerp(0.30, 0.22, t) * lerp(0.45, 1.0, heroIntensity);
+      material.opacity = lerp(0.06, 0.03, t) * lerp(0.45, 1.0, heroIntensity) * lateMul;
     } else {
       material.color.set('#222222');
-      material.opacity = 0.2;
+      material.opacity = 0.03 * lateMul;
     }
   });
 

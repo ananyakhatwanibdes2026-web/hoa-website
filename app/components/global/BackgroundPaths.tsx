@@ -53,16 +53,16 @@ interface PathGroupConfig {
 }
 
 const PATH_CONFIGS: PathGroupConfig[] = [
-  // Left-biased groups (0-3)
-  {startY: -20, spanY: 40, amplitude: 12, frequency: 2.0, baseZ: -20, phaseX: 0, warpFactor: 2.0, xBias: -6, driftDir: 1},
-  {startY: -18, spanY: 36, amplitude: 10, frequency: 2.5, baseZ: -22, phaseX: 1.4, warpFactor: 1.8, xBias: -8, driftDir: -1},
-  {startY: -22, spanY: 42, amplitude: 14, frequency: 1.8, baseZ: -19, phaseX: 2.8, warpFactor: 2.5, xBias: -5, driftDir: 1},
-  {startY: -16, spanY: 34, amplitude: 9, frequency: 3.0, baseZ: -24, phaseX: 4.0, warpFactor: 1.5, xBias: -10, driftDir: -1},
-  // Right-biased groups (4-7)
-  {startY: -20, spanY: 38, amplitude: 11, frequency: 2.2, baseZ: -18, phaseX: 5.2, warpFactor: 2.2, xBias: 6, driftDir: 1},
-  {startY: -19, spanY: 40, amplitude: 13, frequency: 1.9, baseZ: -23, phaseX: 0.6, warpFactor: 1.6, xBias: 8, driftDir: -1},
-  {startY: -15, spanY: 32, amplitude: 8, frequency: 3.2, baseZ: -25, phaseX: 3.5, warpFactor: 2.8, xBias: 10, driftDir: 1},
-  {startY: -24, spanY: 44, amplitude: 16, frequency: 1.6, baseZ: -21, phaseX: 1.8, warpFactor: 1.2, xBias: 5, driftDir: -1},
+  // Left-biased groups (0-3) -- wider spread
+  {startY: -24, spanY: 48, amplitude: 15, frequency: 2.0, baseZ: -20, phaseX: 0, warpFactor: 2.0, xBias: -10, driftDir: 1},
+  {startY: -22, spanY: 44, amplitude: 13, frequency: 2.5, baseZ: -22, phaseX: 1.4, warpFactor: 1.8, xBias: -14, driftDir: -1},
+  {startY: -26, spanY: 50, amplitude: 17, frequency: 1.8, baseZ: -19, phaseX: 2.8, warpFactor: 2.5, xBias: -8, driftDir: 1},
+  {startY: -20, spanY: 42, amplitude: 11, frequency: 3.0, baseZ: -24, phaseX: 4.0, warpFactor: 1.5, xBias: -16, driftDir: -1},
+  // Right-biased groups (4-7) -- wider spread
+  {startY: -24, spanY: 46, amplitude: 14, frequency: 2.2, baseZ: -18, phaseX: 5.2, warpFactor: 2.2, xBias: 10, driftDir: 1},
+  {startY: -23, spanY: 48, amplitude: 16, frequency: 1.9, baseZ: -23, phaseX: 0.6, warpFactor: 1.6, xBias: 14, driftDir: -1},
+  {startY: -19, spanY: 40, amplitude: 10, frequency: 3.2, baseZ: -25, phaseX: 3.5, warpFactor: 2.8, xBias: 16, driftDir: 1},
+  {startY: -28, spanY: 52, amplitude: 19, frequency: 1.6, baseZ: -21, phaseX: 1.8, warpFactor: 1.2, xBias: 8, driftDir: -1},
 ];
 
 const VERTS_PER_LINE = 100;
@@ -104,7 +104,7 @@ function FlowingLine({
     mouseLerp.x = lerp(mouseLerp.x, mouseRead.x, 0.05);
     mouseLerp.y = lerp(mouseLerp.y, mouseRead.y, 0.05);
 
-    const mouseWorldX = mouseLerp.x * 14;
+    const mouseWorldX = mouseLerp.x * 20;
     const mouseWorldY = mouseLerp.y * 10;
     const scrollPhase = scrollRef.current * config.warpFactor;
     const parallaxY = scrollRef.current * 0.8 * config.spanY * 0.15 * config.driftDir;
@@ -149,12 +149,11 @@ function FlowingLine({
 
     geometry.attributes.position.needsUpdate = true;
 
-    // Smooth color inversion synced with BackgroundJourney -- never invisible
     const scroll = scrollRef.current;
     const heroIntensity = scenePhaseState.heroIntensity;
+    const lateMul = 1 - scenePhaseState.latePageFade * 0.85;
     if (scroll < TRANSITION_START) {
       material.color.set('#ffffff');
-      // Intensity taper: full in hero, mist in content sections, restore for silver approach
       let intensityFactor: number;
       if (scroll < 0.22) {
         intensityFactor = 1.0;
@@ -165,14 +164,14 @@ function FlowingLine({
       } else {
         intensityFactor = 1.0;
       }
-      material.opacity = 0.12 * intensityFactor * lerp(0.26, 1.0, heroIntensity);
+      material.opacity = 0.12 * intensityFactor * lerp(0.26, 1.0, heroIntensity) * lateMul;
     } else if (scroll < TRANSITION_END) {
       const t = (scroll - TRANSITION_START) / (TRANSITION_END - TRANSITION_START);
       material.color.setRGB(1 - t * 0.87, 1 - t * 0.87, 1 - t * 0.87);
-      material.opacity = lerp(0.08, 0.13, t) * lerp(0.45, 1.0, heroIntensity);
+      material.opacity = lerp(0.08, 0.13, t) * lerp(0.45, 1.0, heroIntensity) * lateMul;
     } else {
       material.color.set('#222222');
-      material.opacity = 0.08;
+      material.opacity = 0.08 * lateMul;
     }
   });
 

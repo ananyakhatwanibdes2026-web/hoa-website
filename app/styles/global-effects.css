@@ -5,16 +5,26 @@ body > main {
 
 /* CSS custom properties for the design system */
 :root {
-  --bg-primary: #0f0a1e;
+  --bg-primary: #484858;
   --text-primary: #ffffff;
   --font-display: 'Cormorant Garamond', serif;
   --font-body: 'DM Sans', sans-serif;
+  --font-handwritten: 'Caveat', cursive;
+
+  /* Testimonials + Footer section -- pastel palette */
+  --tf-top-bg: #fef3f0;
+  --tf-footer-bg: #2a1525;
+  --tf-accent-pink: #e8a0b4;
+  --tf-accent-lilac: #c8aad8;
+  --tf-accent-peach: #f4b88a;
+  --tf-text-dark: #3d1a2e;
+  --tf-text-muted: #7a5068;
 }
 
 /* Dark starting state -- prevents flash of white on load */
 html,
 body {
-  background-color: #0f0a1e;
+  background-color: #484858;
   color: var(--text-primary);
 }
 

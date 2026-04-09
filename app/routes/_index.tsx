@@ -25,6 +25,18 @@ const BestSellersSection = lazy(
 const CategoriesSection = lazy(
   () => import('~/components/sections/CategoriesSection'),
 );
+const WhySection = lazy(
+  () => import('~/components/sections/WhySection'),
+);
+const CampaignSection = lazy(
+  () => import('~/components/sections/CampaignSection'),
+);
+const LookbookSection = lazy(
+  () => import('~/components/sections/LookbookSection'),
+);
+const TestimonialsFooterSection = lazy(
+  () => import('~/components/sections/TestimonialsFooterSection'),
+);
 // Renders children only after browser mount so React.lazy never fires on the server.
 function ClientOnly({children}: {children: React.ReactNode}) {
   const [mounted, setMounted] = useState(false);
@@ -81,15 +93,13 @@ function loadDeferredData({context}: Route.LoaderArgs) {
   };
 }
 
-const PLACEHOLDER_SECTIONS = [
-  'THE WHY',
-  'CAMPAIGN',
-  'LOOKBOOK',
-  'TESTIMONIALS + FOOTER',
-];
 
 export default function Homepage() {
   const data = useLoaderData<typeof loader>();
+  const whyWrapperRef = useRef<HTMLDivElement>(null);
+  const pearlBgRef = useRef<HTMLDivElement>(null);
+  const campaignWrapperRef = useRef<HTMLDivElement>(null);
+  const titaniumBgRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let ctx: any;
@@ -116,6 +126,42 @@ export default function Homepage() {
             },
           );
         });
+
+        // Pearl background fades in as the user scrolls into The Why section
+        if (pearlBgRef.current && whyWrapperRef.current) {
+          gsap.fromTo(
+            pearlBgRef.current,
+            {opacity: 0},
+            {
+              opacity: 1,
+              ease: 'none',
+              scrollTrigger: {
+                trigger: whyWrapperRef.current,
+                start: 'top 75%',
+                end: 'top 15%',
+                scrub: 1.5,
+              },
+            },
+          );
+        }
+
+        // Titanium overlay fades in as Campaign enters the viewport
+        if (titaniumBgRef.current && campaignWrapperRef.current) {
+          gsap.fromTo(
+            titaniumBgRef.current,
+            {opacity: 0},
+            {
+              opacity: 1,
+              ease: 'none',
+              scrollTrigger: {
+                trigger: campaignWrapperRef.current,
+                start: 'top 80%',
+                end: 'top 20%',
+                scrub: 1,
+              },
+            },
+          );
+        }
       });
     });
     return () => ctx?.revert();
@@ -129,7 +175,7 @@ export default function Homepage() {
         </Suspense>
       </ClientOnly>
 
-      {/* Scrollable HTML overlay */}
+      {/* Scrollable HTML overlay -- Hero through Categories (above canvas) */}
       <div
         style={{
           position: 'relative',
@@ -149,50 +195,108 @@ export default function Homepage() {
             <HeroSection />
           </Suspense>
         </ClientOnly>
+        {/* Extra hero breathing room -- pushes About section further down */}
+        <div style={{height: '200vh'}} aria-hidden="true" />
         <ClientOnly>
           <Suspense fallback={<section style={{height: '100vh'}} />}>
             <AboutSection />
           </Suspense>
         </ClientOnly>
+        <div style={{height: '0', background: '#000000'}} aria-hidden="true" />
         <ClientOnly>
-          <Suspense fallback={<section style={{height: '100vh'}} />}>
+          <Suspense fallback={<section style={{height: '300vh'}} />}>
             <BestSellersSection />
           </Suspense>
         </ClientOnly>
         <ClientOnly>
-          <Suspense fallback={<section style={{height: '600vh'}} />}>
+          <Suspense fallback={<section style={{height: '300vh'}} />}>
             <CategoriesSection />
           </Suspense>
         </ClientOnly>
-        {PLACEHOLDER_SECTIONS.map((label) => (
-          <section
-            key={label}
-            style={{
-              height: '100vh',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: 'transparent',
-              padding: 0,
-            }}
-          >
-            <span
-              className="hoa-section-label"
-              style={{
-                color: 'var(--text-primary, #ffffff)',
-                fontFamily: 'var(--font-display, "Cormorant Garamond", serif)',
-                fontSize: '3rem',
-                fontWeight: 300,
-                letterSpacing: '0.3em',
-                textTransform: 'uppercase',
-                display: 'inline-block',
-                opacity: 0,
-              }}
-            >
-              {label}
-            </span>
-          </section>
-        ))}
+      </div>
+
+      {/* The Why section -- pearl light background */}
+      <div
+        ref={whyWrapperRef}
+        style={{
+          position: 'relative',
+          zIndex: 1,
+          margin: '0 -1rem',
+        }}
+      >
+        <div
+          ref={pearlBgRef}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: -1,
+            pointerEvents: 'none',
+            opacity: 0,
+            background: 'linear-gradient(to bottom, #FCFBF8, #F3F1EC, #E8E6DF)',
+          }}
+        />
+        <ClientOnly>
+          <Suspense fallback={<section style={{height: '100vh'}} />}>
+            <WhySection />
+          </Suspense>
+        </ClientOnly>
+      </div>
+
+      {/* Campaign section -- dark titanium background fades in on scroll */}
+      <div
+        ref={campaignWrapperRef}
+        style={{
+          position: 'relative',
+          zIndex: 1,
+          margin: '0 -1rem',
+        }}
+      >
+        <div
+          ref={titaniumBgRef}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: -1,
+            pointerEvents: 'none',
+            opacity: 0,
+            background: 'linear-gradient(to bottom, #18181B, #27272A)',
+          }}
+        />
+        <ClientOnly>
+          <Suspense fallback={<section style={{height: '600vh'}} />}>
+            <CampaignSection />
+          </Suspense>
+        </ClientOnly>
+      </div>
+
+      {/* Lookbook section -- horizontal focal gallery */}
+      <div
+        style={{
+          position: 'relative',
+          zIndex: 1,
+          margin: '0 -1rem',
+        }}
+      >
+        <ClientOnly>
+          <Suspense fallback={<section style={{height: '700vh'}} />}>
+            <LookbookSection />
+          </Suspense>
+        </ClientOnly>
+      </div>
+
+      {/* Testimonials + Footer -- above canvas */}
+      <div
+        style={{
+          position: 'relative',
+          zIndex: 1,
+          margin: '0 -1rem',
+        }}
+      >
+        <ClientOnly>
+          <Suspense fallback={<section style={{height: '120vh'}} />}>
+            <TestimonialsFooterSection />
+          </Suspense>
+        </ClientOnly>
       </div>
     </>
   );

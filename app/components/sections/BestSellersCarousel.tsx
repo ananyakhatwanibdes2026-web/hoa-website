@@ -1,16 +1,24 @@
-import React, { useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { Environment, Lightformer, RoundedBox } from '@react-three/drei';
+import { Environment, Lightformer, RoundedBox, useGLTF, useTexture } from '@react-three/drei';
 import * as THREE from 'three';
 import gsap from 'gsap';
+
+if (typeof window !== 'undefined') {
+  useGLTF.preload('/models/Spiral.glb', '/draco/');
+}
+
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 const CARDS = 5;
 const ANGLE_STEP = (2 * Math.PI) / CARDS; // 72 degrees
-const RADIUS = 3.8;
-const Z_FLATTEN = 0.42; // flatten circle into coverflow arc
+const ORBIT_RADIUS_X = 5.5; // horizontal spread of the elliptical orbit
+const ORBIT_RADIUS_Z = 2.8; // depth kept shallow so all 5 cards stay in front of the spiral
+const ROT_PER_CARD = 0.6; // Y-rotation per offset step (~34 deg; +-2 cards at ~68 deg)
+const MIN_SCALE = 0.62;
+const SCALE_STEP = 0.19;  // scale reduction per step from center
 
 function lerp(a: number, b: number, t: number) {
   return a + (b - a) * t;
@@ -20,7 +28,7 @@ function lerp(a: number, b: number, t: number) {
 // Luxury gradient palettes for each card (dark, editorial)
 // ---------------------------------------------------------------------------
 const CARD_PALETTES: [string, string, string][] = [
-  ['#0f0a1e', '#1a1035', '#2a1f50'], // deep indigo
+  ['#0a0e1a', '#141a2a', '#1e2840'], // deep navy
   ['#0d1520', '#1a2535', '#253545'], // slate charcoal
   ['#0a1a18', '#122825', '#1e3830'], // midnight teal
   ['#1a1a1e', '#2a2a30', '#3a3a40'], // graphite silver
@@ -40,8 +48,8 @@ const CARD_TITLES = [
 // Build a CanvasTexture for each card
 // ---------------------------------------------------------------------------
 function makeCardTexture(palette: [string, string, string], label: string) {
-  const w = 400;
-  const h = 600;
+  const w = 440;
+  const h = 660;
   const canvas = document.createElement('canvas');
   canvas.width = w;
   canvas.height = h;
@@ -96,7 +104,7 @@ function makeCardTexture(palette: [string, string, string], label: string) {
 // ---------------------------------------------------------------------------
 interface CardProps {
   index: number;
-  texture: THREE.CanvasTexture;
+  texture: THREE.Texture;
   rotStateRef: React.MutableRefObject<{ angle: number }>;
   scaleRef: {current: number};
   onCardClick: (index: number) => void;
@@ -105,12 +113,17 @@ interface CardProps {
 function CarouselCard({ index, texture, rotStateRef, scaleRef, onCardClick }: CardProps) {
   const pivotRef = useRef<THREE.Group>(null!);
   const meshRef = useRef<THREE.Mesh>(null!);
-  const frameRef = useRef<THREE.Mesh>(null!);
   const glowRef = useRef<THREE.Mesh>(null!);
   const hoveredRef = useRef(false);
   const glowIntensRef = useRef(0);
 
-  const baseAngle = index * ANGLE_STEP;
+  // Smoothed visual position refs — initialized at the card's starting offset
+  // so there is no fly-in on first frame
+  const initOffset = index <= CARDS / 2 ? index : index - CARDS;
+  const initAngle = initOffset * ANGLE_STEP;
+  const posXRef = useRef(ORBIT_RADIUS_X * Math.sin(initAngle));
+  const posZRef = useRef(-ORBIT_RADIUS_Z * (1 - Math.cos(initAngle)));
+  const rotYRef = useRef(-initOffset * ROT_PER_CARD);
 
   const imageMaterial = useMemo(
     () =>
@@ -121,19 +134,6 @@ function CarouselCard({ index, texture, rotStateRef, scaleRef, onCardClick }: Ca
         envMapIntensity: 1.2,
       }),
     [texture],
-  );
-
-  const frameMaterial = useMemo(
-    () =>
-      new THREE.MeshPhysicalMaterial({
-        color: '#c8c8c8',
-        metalness: 1.0,
-        roughness: 0.04,
-        envMapIntensity: 2.5,
-        clearcoat: 0.6,
-        clearcoatRoughness: 0.05,
-      }),
-    [],
   );
 
   const glowMaterial = useMemo(
@@ -153,24 +153,47 @@ function CarouselCard({ index, texture, rotStateRef, scaleRef, onCardClick }: Ca
     if (!pivotRef.current) return;
 
     const t = clock.elapsedTime;
-    const worldAngle = baseAngle + rotStateRef.current.angle;
 
-    pivotRef.current.position.x = Math.sin(worldAngle) * RADIUS;
-    pivotRef.current.position.z = Math.cos(worldAngle) * RADIUS * Z_FLATTEN;
+    // Continuous position in card-index space (0.0 to 4.0 as scroll advances)
+    const activeProgress = -rotStateRef.current.angle / ANGLE_STEP;
 
-    const proximity = Math.cos(worldAngle);
-    const targetScale = 0.62 + ((proximity + 1) / 2) * 0.38;
-    scaleRef.current = lerp(scaleRef.current, targetScale, 0.08);
-    pivotRef.current.scale.setScalar(scaleRef.current);
+    // Signed offset from active center, wrapped to [-2.5, 2.5)
+    let offset = index - activeProgress;
+    offset = offset - Math.round(offset / CARDS) * CARDS;
+    const absOff = Math.abs(offset);
 
-    pivotRef.current.position.y = Math.sin(t * 0.9 + index * 1.4) * 0.1;
+    const angle = offset * ANGLE_STEP;
+    const targetX    = ORBIT_RADIUS_X * Math.sin(angle);
+    const targetZ    = -ORBIT_RADIUS_Z * (1 - Math.cos(angle));
+    const targetRotY = -offset * ROT_PER_CARD;
 
-    pivotRef.current.rotation.y = worldAngle;
-    pivotRef.current.rotation.z = Math.sin(t * 0.55 + index * 2.2) * 0.018;
-
-    if (frameMaterial) {
-      frameMaterial.envMapIntensity = 2.5 + Math.sin(t * 1.2 + index * 0.9) * 0.4;
+    // When the card is near-invisible at the wrap boundary (absOff ~2.5), snap
+    // directly to the new position so the teleport is invisible. Otherwise lerp
+    // for buttery smooth motion.
+    if (absOff < 2.3) {
+      posXRef.current  = lerp(posXRef.current,  targetX,    0.10);
+      posZRef.current  = lerp(posZRef.current,  targetZ,    0.10);
+      rotYRef.current  = lerp(rotYRef.current,  targetRotY, 0.10);
+    } else {
+      posXRef.current  = targetX;
+      posZRef.current  = targetZ;
+      rotYRef.current  = targetRotY;
     }
+
+    pivotRef.current.position.x = posXRef.current;
+    pivotRef.current.position.z = posZRef.current;
+    pivotRef.current.position.y = Math.sin(t * 0.9 + index * 1.4) * 0.12;
+
+    pivotRef.current.rotation.y = rotYRef.current;
+    pivotRef.current.rotation.z = Math.sin(t * 0.55 + index * 2.2) * 0.012;
+
+    // Scale tapers toward edges; fade to zero near wrap boundary so the
+    // snap reposition is never visible
+    const wrapFade   = Math.min(1, Math.max(0, (2.5 - absOff) * 2)); // 1.0 at |off|=2.0, 0 at 2.5
+    const baseScale  = Math.max(MIN_SCALE, 1.0 - absOff * SCALE_STEP);
+    const targetScale = baseScale * wrapFade;
+    scaleRef.current = lerp(scaleRef.current, targetScale, 0.10);
+    pivotRef.current.scale.setScalar(scaleRef.current);
 
     glowIntensRef.current = lerp(glowIntensRef.current, hoveredRef.current ? 1 : 0, 0.08);
     glowMaterial.opacity = glowIntensRef.current * 0.28;
@@ -180,25 +203,83 @@ function CarouselCard({ index, texture, rotStateRef, scaleRef, onCardClick }: Ca
     <group ref={pivotRef} position={[0, 0, 0]}>
       <RoundedBox
         ref={glowRef as any}
-        args={[2.75, 3.85, 0.01]}
-        radius={0.12}
+        args={[4.8, 6.75, 0.01]}
+        radius={0.16}
         smoothness={4}
         position={[0, 0, -0.02]}
         material={glowMaterial}
       />
-      <RoundedBox
-        ref={frameRef as any}
-        args={[2.6, 3.7, 0.025]}
-        radius={0.1}
-        smoothness={4}
-        material={frameMaterial}
+      <mesh
+        ref={meshRef}
+        position={[0, 0, 0.014]}
+        material={imageMaterial}
         onPointerEnter={() => { hoveredRef.current = true; }}
         onPointerLeave={() => { hoveredRef.current = false; }}
         onClick={() => onCardClick(index)}
-      />
-      <mesh ref={meshRef} position={[0, 0, 0.014]} material={imageMaterial}>
-        <planeGeometry args={[2.36, 3.46]} />
+      >
+        <planeGeometry args={[4.15, 6.1]} />
       </mesh>
+    </group>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Spiral background decor
+// ---------------------------------------------------------------------------
+function SpiralDecor({ position = [0, 0, -4] as [number, number, number], rotStateRef }: { position?: [number, number, number]; rotStateRef: React.MutableRefObject<{ angle: number }> }) {
+  const { scene: gltfScene } = useGLTF('/models/Spiral.glb', '/draco/');
+  const groupRef = useRef<THREE.Group>(null!);
+
+  // Do all setup in useMemo — runs synchronously during render before the scene
+  // is attached to the R3F scenegraph, so Box3 sees NO parent transforms.
+  // This prevents the "orbiting" bug caused by useFrame rotating the parent group
+  // before useEffect's bbox centering runs.
+  const scene = useMemo(() => {
+    const s = gltfScene.clone(true);
+
+    // Reset any transforms inherited from the cached gltfScene
+    s.position.set(0, 0, 0);
+    s.scale.set(1, 1, 1);
+    s.rotation.set(0, 0, 0);
+    s.updateMatrixWorld(true);
+
+    // Center at origin — world space == local space here (no parent yet)
+    const box = new THREE.Box3().setFromObject(s);
+    const center = new THREE.Vector3();
+    const size = new THREE.Vector3();
+    box.getCenter(center);
+    box.getSize(size);
+    s.position.sub(center);
+
+    // Scale so the largest dimension is ~14 Three.js units
+    const maxDim = Math.max(size.x, size.y, size.z);
+    if (maxDim > 0) s.scale.setScalar(14 / maxDim);
+
+    s.traverse((child: any) => {
+      if (!child.isMesh) return;
+      child.material = new THREE.MeshPhysicalMaterial({
+        color: new THREE.Color('#909098'),
+        metalness: 0.9,
+        roughness: 0.2,
+        envMapIntensity: 1.0,
+        transparent: true,
+        opacity: 0.45,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+      });
+    });
+
+    return s;
+  }, [gltfScene]);
+
+  useFrame(() => {
+    if (!groupRef.current) return;
+    groupRef.current.rotation.y = -rotStateRef.current.angle;
+  });
+
+  return (
+    <group ref={groupRef} position={position}>
+      <primitive object={scene} />
     </group>
   );
 }
@@ -214,33 +295,29 @@ interface SceneProps {
   onCardClick: (index: number) => void;
 }
 
-const AUTO_SPEED = 0.003;
-
 function CarouselScene({ rotStateRef, cardScaleRefs, hoverRef, animatingRef, onCardClick }: SceneProps) {
-  const textures = useMemo(() => {
-    return CARD_PALETTES.map((p, i) => makeCardTexture(p, CARD_LABELS[i]));
-  }, []);
-
-  useFrame(() => {
-    if (!animatingRef.current) {
-      rotStateRef.current.angle -= AUTO_SPEED;
-    }
-  });
+  // Single product image used on all 5 cards
+  const imgTexture = useTexture('/bstest.jpg');
 
   return (
     <>
-      <Environment background={false} resolution={128}>
-        <Lightformer intensity={4} position={[0, 5, 0]} color="#ffffff" />
-        <Lightformer intensity={2.5} position={[-5, 1, 3]} color="#ddd4ff" />
-        <Lightformer intensity={2.5} position={[5, 1, 3]} color="#e8e8e8" />
-        <Lightformer intensity={1.5} position={[0, -3, 5]} color="#c8c8d8" />
+      <Environment background={false} resolution={256}>
+        <Lightformer intensity={8} position={[0, 5, 0]} scale={[10, 2, 1]} color="#ffffff" />
+        <Lightformer intensity={4} position={[-5, 1, 3]} color="#ddd4ff" />
+        <Lightformer intensity={4} position={[5, 1, 3]} color="#e8e8e8" />
+        <Lightformer intensity={3} position={[0, -3, 5]} color="#ffffff" />
+        <Lightformer intensity={5} position={[0, 0, 8]} scale={[8, 4, 1]} color="#f0f0f5" />
       </Environment>
-      <group>
-        {textures.map((tex, i) => (
+      <pointLight position={[5, 5, 5]} intensity={3} color="#ffffff" />
+      <pointLight position={[-5, -5, 5]} intensity={3} color="#ffffff" />
+      <SpiralDecor position={[0, 7, -4]} rotStateRef={rotStateRef} />
+      <SpiralDecor position={[0, -7, -4]} rotStateRef={rotStateRef} />
+      <group position={[0, 0, 5]}>
+        {Array.from({length: CARDS}, (_, i) => (
           <CarouselCard
             key={i}
             index={i}
-            texture={tex}
+            texture={imgTexture}
             rotStateRef={rotStateRef}
             scaleRef={cardScaleRefs[i]}
             onCardClick={onCardClick}
@@ -274,7 +351,7 @@ export default function BestSellersCarousel({
   return (
     <Canvas
       dpr={isMobile ? [1, 1] : [1, 1.5]}
-      camera={{ fov: 65, position: [0, 1.2, 9] }}
+      camera={{ fov: 65, position: [0, 0.5, 11] }}
       gl={{
         antialias: true,
         alpha: true,

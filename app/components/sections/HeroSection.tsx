@@ -42,13 +42,25 @@ export function HeroSection() {
   return (
     <section
       style={{
-        height: '200vh',
+        height: '350vh',
         position: 'relative',
         overflow: 'hidden',
         padding: 0,
         pointerEvents: 'none',
       }}
     >
+      {/* Silver-blue atmospheric glow -- silverish center, sapphire depth at edges */}
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background:
+            'radial-gradient(ellipse 85% 65% at 50% 38%, rgba(180,205,235,0.09) 0%, rgba(100,150,220,0.05) 45%, transparent 100%)',
+          pointerEvents: 'none',
+          zIndex: 1,
+        }}
+      />
+
       {/* Brand name -- centered, gradient shimmer, no box */}
       <div
         ref={textRef}

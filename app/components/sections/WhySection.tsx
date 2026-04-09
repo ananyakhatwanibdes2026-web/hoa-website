@@ -1,12 +1,12 @@
 import {useEffect, useRef} from 'react';
 import {gsap} from 'gsap';
 import {ScrollTrigger} from 'gsap/ScrollTrigger';
-import {aboutSectionState} from '~/lib/sceneState';
+import {whySectionState} from '~/lib/sceneState';
 import {AboutStillLogo} from './AboutStillLogo';
 
 gsap.registerPlugin(ScrollTrigger);
 
-export function AboutSection() {
+export default function WhySection() {
   const sectionRef = useRef<HTMLElement>(null);
   const leftRef = useRef<HTMLDivElement>(null);
   const rightRef = useRef<HTMLDivElement>(null);
@@ -51,7 +51,7 @@ export function AboutSection() {
         );
       });
 
-      // Right items: staggered fade + lift (after all words visible)
+      // Right items: staggered fade + lift
       itemsRef.current.forEach((el, i) => {
         if (!el) return;
         tl.fromTo(
@@ -69,7 +69,7 @@ export function AboutSection() {
         0.88,
       );
 
-      // Black bg fades in just as the section enters -- starting before THE appears
+      // Black bg fades in as section enters
       if (blackBgRef.current) {
         gsap.fromTo(
           blackBgRef.current,
@@ -87,16 +87,16 @@ export function AboutSection() {
         );
       }
 
-      // Logo section-awareness: update shared state for SceneCanvas
+      // Section-awareness: update shared state
       ScrollTrigger.create({
         trigger: section,
         start: 'top 70%',
         end: 'bottom 30%',
         onToggle: (self) => {
-          aboutSectionState.active = self.isActive;
+          whySectionState.active = self.isActive;
         },
         onUpdate: (self) => {
-          aboutSectionState.sectionProgress = self.progress;
+          whySectionState.sectionProgress = self.progress;
         },
       });
     }, section);
@@ -116,7 +116,7 @@ export function AboutSection() {
         pointerEvents: 'none',
       }}
     >
-      {/* Pure black background overlay -- fades in after REBELLION */}
+      {/* Pure black background overlay */}
       <div
         ref={blackBgRef}
         style={{
@@ -125,7 +125,7 @@ export function AboutSection() {
           zIndex: -1,
           pointerEvents: 'none',
           opacity: 0,
-          background: 'linear-gradient(to bottom, #060608 0%, #0c0c12 40%, #1a1a22 65%, #2c2c3a 85%, #383848 100%)',
+          background: 'linear-gradient(to bottom, #1c1c22 0%, #2a2a32 25%, #3a3a44 50%, #868690 78%, #b0b0b8 100%)',
         }}
       />
 
@@ -143,7 +143,7 @@ export function AboutSection() {
           userSelect: 'none',
         }}
       >
-        {['THE', 'REFINED', 'REBELLION'].map((word, i) => (
+        {['WHY', 'HOUSE OF', 'AN'].map((word, i) => (
           <div
             key={word}
             ref={(el) => {
@@ -218,7 +218,7 @@ export function AboutSection() {
             opacity: 0,
           }}
         >
-          Founded in 2012
+          Founded in 2024
         </div>
 
         {/* Thin divider */}
@@ -252,8 +252,8 @@ export function AboutSection() {
             opacity: 0,
           }}
         >
-          We blend story, art &amp; technology as an in-house team of passionate
-          makers.
+          We blend story, craft &amp; contemporary design
+          as an in-house atelier of passionate makers.
         </div>
 
         {/* Secondary paragraph */}
@@ -272,8 +272,9 @@ export function AboutSection() {
             opacity: 0,
           }}
         >
-          Our industry-leading web toolset consistently delivers award-winning
-          work through quality and performance.
+          Our commitment to 97% recycled silver consistently
+          delivers award-worthy jewellery through quality,
+          sustainability and performance.
         </div>
       </div>
 
@@ -294,5 +295,3 @@ export function AboutSection() {
     </section>
   );
 }
-
-export default AboutSection;
