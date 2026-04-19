@@ -42,8 +42,12 @@ Store setup, Hydrogen scaffolding, dependencies, 3D asset conversion.
 35. ~~UI polish pass: Categories bg smoked titanium, inner border overlays, COLLECTIONS heading, LOOKBOOK heading above Campaign, unified Tier 1 (character wave) + Tier 2 (glow+tracking) interactive heading system across 5 sections, pearl+titanium scroll background transitions for Why+Campaign~~ DONE
 36. ~~About section restyle: Bebas Neue font, white bloom glow, black bg overlay (GSAP scrub), floor ambient glow, spacer+BestSellers section black backgrounds~~ DONE
 37. About->Bestsellers gap: wipe start offset needs updating (see TODO.md) -- IN PROGRESS
-34. Post-processing polish (chromatic aberration -- Bloom currently disabled, can be re-enabled)
-34. Performance optimization + mobile pass
+38. ~~Active Theory visual re-theme (2026-04-11): black base, blue/periwinkle accent, warm silver/titanium removed. 8 files changed. AT CSS tokens added.~~ DONE
+39. Place test images from house-of-an-1 into site sections -- IN PROGRESS (interrupted)
+40. ~~AT UI chrome (2026-04-14): split glass pill nav, SideRail left rail, AmbientTicker color-dodge, CornerTicker marquee, RouteTransition black overlay, ParticleField 12k points in hero. All wired into root.tsx.~~ DONE
+41. ~~Unified Campaign+Lookbook aurora + scroll-gap compression (2026-04-17): ContinuousAuroraCanvas (shared `position:fixed` Canvas2D, 4 ribbons, ~70% boosted alpha/amp, phase stitched across section seam, floor rises to `#000` for TestimonialsFooter handoff). CampaignMonolithBg + LookbookAuroraCanvas deleted. Campaign timeline reworked 3→3.2 units with pre-exit HOLD so card1 doesn't leave early. Why + Lookbook wrappers `-60vh → -120vh` (Campaign wrapper `0`) -- ~60vh shorter at each transition. Lookbook animST delayed to `top+=120vh top` so carousel stays still during Campaign overlap. Envelopes widened/shifted for smoother crossfade (Campaign exit 0.85→1, Lookbook enter 0.20→0.34).~~ DONE
+42. Post-processing polish (chromatic aberration -- Bloom currently disabled, can be re-enabled)
+43. Performance optimization + mobile pass
 
 ## Phase 3: Inner Pages
 - PDP (stacked card image gallery, slide-up transitions, custom 3D cursor on gallery)
@@ -54,8 +58,8 @@ Store setup, Hydrogen scaffolding, dependencies, 3D asset conversion.
 - Mobile responsive pass (all sections)
 - Performance audit (Lighthouse 90+ target)
 - SEO + structured data
-- prefers-reduced-motion support
-- Page transitions between routes
+- prefers-reduced-motion support (ParticleField, tickers, AmbientTicker)
+- ~~Page transitions between routes~~ DONE (RouteTransition.tsx)
 - Domain connection (houseofan.com or houseofan.in)
 - Deploy to Shopify Oxygen
 - Client review + launch
@@ -66,16 +70,16 @@ Note: 125vh Hero-to-About spacer removed in earlier session. No spacer between H
 
 | Zone | Height | Section | Background |
 |------|--------|---------|------------|
-| Hero | 200vh | Full spectacle, 3D background | Dark #0a0e1a (BackgroundJourney) |
+| Hero | 200vh | Full spectacle, 3D background | #000000 pure black (BackgroundJourney, AT-aligned, updated 2026-04-11) |
 | About | 100vh | Editorial word reveal, logoFade, Bebas Neue font | Black (#000 overlay fades in via GSAP scrub, trigger top 90%->25%) |
-| Spacer | 31.5vh | Empty -- wipe timing gap issue (see TODO) | #000000 explicit |
-| Bestsellers | 300vh (sticky 100vh) | 3D carousel, scroll-driven rotation | #000000 explicit on section + silver wipe overlay (position:fixed clip-path) |
+| Spacer | 0vh | (removed) | -- |
+| Bestsellers | 300vh (sticky 100vh) | 3D carousel, scroll-driven rotation | #000000 explicit + navy-to-blue-steel wipe overlay `#0e1828->#8aaccc` (AT palette) |
 | latePageFade | -- | Global 3D elements fade (scroll 0.24-0.30) | -- |
-| Categories | 300vh (sticky 100vh) | Expanding accordion -- 3 floating portrait cards | Smoked titanium `#18181b -> #09090b` |
-| The Why | 100vh | Two-column editorial, dark warm text | Pearl `#FCFBF8 -> #E8E6DF` (fades in on scroll) |
-| Campaign | 600vh (sticky 100vh) | 3-card physical stack, LOOKBOOK heading | Titanium `#18181B -> #27272A` (fades in on scroll) |
-| Lookbook | 700vh (sticky 100vh) | 6-image horizontal focal gallery | Dark warm brown `#1a120a -> #0d0906` (own bg) |
-| Testimonials+Footer | ~120vh | Polaroid cards + MISHO 5-column footer | Chrome radial `#2a2a3a -> #0a0e1a` |
+| Categories | 300vh (sticky 100vh) | 3 floating portrait cards | Blue-dark radial `#1a2038->#060c18`, blue conic sweep borders (AT palette) |
+| The Why | 100vh | Two-column editorial | Dark navy-to-blue `#08101e->#5a80aa` (AT palette, updated 2026-04-11) |
+| Campaign | 600vh (sticky 100vh) | 3-card physical stack | Cards: #1a1a24, #0e1828, #161220 (already AT-aligned) |
+| Lookbook | 700vh (sticky 100vh) | 6-image horizontal focal gallery | Deep navy `#06122a->#02040f` (AT palette, updated 2026-04-11). Blue focal frame. |
+| Testimonials+Footer | ~120vh | Polaroid cards + 5-column footer | `#8ab0d0->#1e3460` blue-silver to navy (matches BackgroundJourney 82% stop, updated 2026-04-11) |
 
 ## Content Dependencies (from Ananyaa)
 | Content | Status |

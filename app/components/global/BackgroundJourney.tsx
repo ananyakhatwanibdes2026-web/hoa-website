@@ -7,15 +7,9 @@ interface ColorStop {
 }
 
 const COLOR_STOPS: ColorStop[] = [
-  {pos: 0.0,  bg: '#484858', text: '#ffffff'},  // silver start
-  {pos: 0.04, bg: '#0d1e38', text: '#ffffff'},  // deep sapphire blue after ~110vh
-  {pos: 0.09, bg: '#0d1e38', text: '#ffffff'},  // hold blue through hero midpoint
-  {pos: 0.13, bg: '#050505', text: '#ffffff'},  // fade to black by hero end
-  {pos: 0.25, bg: '#050505', text: '#ffffff'},  // hold black through about section
-  {pos: 0.50, bg: '#1c1c24', text: '#ffffff'},  // dark steel
-  {pos: 0.68, bg: '#383848', text: '#ffffff'},  // medium titanium
-  {pos: 0.82, bg: '#bebec0', text: '#111111'},  // polished silver
-  {pos: 1.0,  bg: '#bebec0', text: '#111111'},  // hold silver
+  // Pure black throughout — shader handles all blue accent lighting
+  {pos: 0.000, bg: '#000000', text: '#ffffff'},
+  {pos: 1.000, bg: '#000000', text: '#ffffff'},
 ];
 
 function hexToRgb(hex: string): [number, number, number] {
@@ -66,26 +60,41 @@ function applyColors(progress: number) {
   document.documentElement.style.setProperty('--text-primary', text);
 }
 
+// Cache scrollHeight so it is never read inside the hot scroll path.
+let _bgDocHeight = 0;
+
+function updateBgDocHeight() {
+  _bgDocHeight = document.documentElement.scrollHeight - window.innerHeight;
+}
+
 function getScrollProgress(): number {
-  const scrollTop = window.scrollY;
-  const docHeight =
-    document.documentElement.scrollHeight - window.innerHeight;
-  return docHeight > 0 ? scrollTop / docHeight : 0;
+  if (_bgDocHeight <= 0) return 0;
+  return Math.min(1, window.scrollY / _bgDocHeight);
 }
 
 export function BackgroundJourney() {
   useEffect(() => {
-    // Apply immediately based on current scroll position
+    updateBgDocHeight();
     applyColors(getScrollProgress());
 
+    // RAF gate: collapse multiple scroll events in the same frame into one
+    let rafPending = false;
     const onScroll = () => {
+      if (!rafPending) {
+        rafPending = true;
+        requestAnimationFrame(() => {
+          applyColors(getScrollProgress());
+          rafPending = false;
+        });
+      }
+    };
+
+    const onResize = () => {
+      updateBgDocHeight();
       applyColors(getScrollProgress());
     };
 
     window.addEventListener('scroll', onScroll, {passive: true});
-
-    // Also recalculate if the page height changes (images load, etc.)
-    const onResize = () => applyColors(getScrollProgress());
     window.addEventListener('resize', onResize, {passive: true});
 
     return () => {

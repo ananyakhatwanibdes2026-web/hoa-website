@@ -1,7 +1,10 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { Environment, Lightformer, RoundedBox, useGLTF, useTexture } from '@react-three/drei';
+import { Environment, Lightformer, useGLTF, useTexture } from '@react-three/drei';
+import { Selection, Select } from '@react-three/postprocessing';
 import * as THREE from 'three';
+import { BSMouseTracker, BSPostFX, BSDriftParticles, BSFloatingOrbs, BSAtmosphericRings } from './BestSellersDecorations';
+import { bestsellersSectionState } from '~/lib/sceneState';
 import gsap from 'gsap';
 
 if (typeof window !== 'undefined') {
@@ -17,11 +20,16 @@ const ANGLE_STEP = (2 * Math.PI) / CARDS; // 72 degrees
 const ORBIT_RADIUS_X = 5.5; // horizontal spread of the elliptical orbit
 const ORBIT_RADIUS_Z = 2.8; // depth kept shallow so all 5 cards stay in front of the spiral
 const ROT_PER_CARD = 0.6; // Y-rotation per offset step (~34 deg; +-2 cards at ~68 deg)
-const MIN_SCALE = 0.62;
-const SCALE_STEP = 0.19;  // scale reduction per step from center
+const MIN_SCALE = 0.42;
+const SCALE_STEP = 0.28;  // scale reduction per step from center
 
 function lerp(a: number, b: number, t: number) {
   return a + (b - a) * t;
+}
+
+function smoothstep(edge0: number, edge1: number, x: number): number {
+  const t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)));
+  return t * t * (3 - 2 * t);
 }
 
 // ---------------------------------------------------------------------------
@@ -100,6 +108,67 @@ function makeCardTexture(palette: [string, string, string], label: string) {
 }
 
 // ---------------------------------------------------------------------------
+// Soft radial halo alpha mask — used for the center-card atmospheric glow.
+// Large plane (11x15) with radial falloff so it bleeds beyond card edges
+// organically instead of creating a visible rectangular border.
+// ---------------------------------------------------------------------------
+let _haloAlpha: THREE.CanvasTexture | null = null;
+function makeHaloAlphaTexture(): THREE.CanvasTexture {
+  if (_haloAlpha) return _haloAlpha;
+  const W = 256, H = 384;
+  const canvas = document.createElement('canvas');
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d')!;
+  // Black background (fully transparent via alphaMap)
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, W, H);
+  // White radial gradient — alphaMap reads luminance for transparency
+  const radial = ctx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, Math.max(W, H) * 0.55);
+  radial.addColorStop(0,    'rgba(255,255,255,0.95)');
+  radial.addColorStop(0.35, 'rgba(255,255,255,0.55)');
+  radial.addColorStop(0.65, 'rgba(255,255,255,0.15)');
+  radial.addColorStop(1,    'rgba(255,255,255,0)');
+  ctx.fillStyle = radial;
+  ctx.fillRect(0, 0, W, H);
+  _haloAlpha = new THREE.CanvasTexture(canvas);
+  _haloAlpha.needsUpdate = true;
+  return _haloAlpha;
+}
+
+// ---------------------------------------------------------------------------
+// Rounded-corner alpha mask (shared singleton across all cards)
+// ---------------------------------------------------------------------------
+let _cornerAlpha: THREE.CanvasTexture | null = null;
+function getCornerAlpha(): THREE.CanvasTexture {
+  if (_cornerAlpha) return _cornerAlpha;
+  const W = 256, H = 384;
+  const canvas = document.createElement('canvas');
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d')!;
+  const r = 24;
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.moveTo(r, 0);
+  ctx.lineTo(W - r, 0);
+  ctx.arcTo(W, 0, W, r, r);
+  ctx.lineTo(W, H - r);
+  ctx.arcTo(W, H, W - r, H, r);
+  ctx.lineTo(r, H);
+  ctx.arcTo(0, H, 0, H - r, r);
+  ctx.lineTo(0, r);
+  ctx.arcTo(0, 0, r, 0, r);
+  ctx.closePath();
+  ctx.fill();
+  _cornerAlpha = new THREE.CanvasTexture(canvas);
+  _cornerAlpha.needsUpdate = true;
+  return _cornerAlpha;
+}
+
+// ---------------------------------------------------------------------------
 // Single carousel card
 // ---------------------------------------------------------------------------
 interface CardProps {
@@ -113,9 +182,7 @@ interface CardProps {
 function CarouselCard({ index, texture, rotStateRef, scaleRef, onCardClick }: CardProps) {
   const pivotRef = useRef<THREE.Group>(null!);
   const meshRef = useRef<THREE.Mesh>(null!);
-  const glowRef = useRef<THREE.Mesh>(null!);
-  const hoveredRef = useRef(false);
-  const glowIntensRef = useRef(0);
+  const cardEntranceOpacityRef = useRef(0);
 
   // Smoothed visual position refs — initialized at the card's starting offset
   // so there is no fly-in on first frame
@@ -125,29 +192,30 @@ function CarouselCard({ index, texture, rotStateRef, scaleRef, onCardClick }: Ca
   const posZRef = useRef(-ORBIT_RADIUS_Z * (1 - Math.cos(initAngle)));
   const rotYRef = useRef(-initOffset * ROT_PER_CARD);
 
+  const cornerAlpha = useMemo(() => getCornerAlpha(), []);
+
   const imageMaterial = useMemo(
     () =>
-      new THREE.MeshPhysicalMaterial({
-        map: texture,
-        metalness: 0.15,
-        roughness: 0.35,
-        envMapIntensity: 1.2,
-      }),
-    [texture],
-  );
-
-  const glowMaterial = useMemo(
-    () =>
       new THREE.MeshBasicMaterial({
-        color: '#b0b0e0',
+        map: texture,
+        alphaMap: cornerAlpha,
         transparent: true,
         opacity: 0,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false,
-        side: THREE.FrontSide,
       }),
-    [],
+    [texture, cornerAlpha],
   );
+
+  const glowMaterial = useMemo(() => {
+    const haloAlpha = makeHaloAlphaTexture();
+    return new THREE.MeshBasicMaterial({
+      color: new THREE.Color('#5878e0'),
+      alphaMap: haloAlpha,
+      transparent: true,
+      opacity: 0,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+  }, []);
 
   useFrame(({ clock }) => {
     if (!pivotRef.current) return;
@@ -195,26 +263,30 @@ function CarouselCard({ index, texture, rotStateRef, scaleRef, onCardClick }: Ca
     scaleRef.current = lerp(scaleRef.current, targetScale, 0.10);
     pivotRef.current.scale.setScalar(scaleRef.current);
 
-    glowIntensRef.current = lerp(glowIntensRef.current, hoveredRef.current ? 1 : 0, 0.08);
-    glowMaterial.opacity = glowIntensRef.current * 0.28;
+    // Entrance fade-in: cards appear after spiral (entranceProgress 0.4 -> 0.8)
+    const ep = bestsellersSectionState.entranceProgress;
+    const targetEntrance = smoothstep(0.4, 0.8, ep);
+    cardEntranceOpacityRef.current = lerp(cardEntranceOpacityRef.current, targetEntrance, 0.06);
+
+    // Offset opacity taper — side cards recede, center dominates
+    const offsetOpacity = Math.max(0.18, 1.0 - absOff * 0.44);
+    imageMaterial.opacity = cardEntranceOpacityRef.current * offsetOpacity;
+
+    // Atmospheric halo: large soft radial glow visible only near center (absOff < ~0.5)
+    const glowTarget = Math.max(0, 1.0 - absOff * 2.2) * 0.22 * cardEntranceOpacityRef.current;
+    glowMaterial.opacity = lerp(glowMaterial.opacity, glowTarget, 0.08);
   });
 
   return (
     <group ref={pivotRef} position={[0, 0, 0]}>
-      <RoundedBox
-        ref={glowRef as any}
-        args={[4.8, 6.75, 0.01]}
-        radius={0.16}
-        smoothness={4}
-        position={[0, 0, -0.02]}
-        material={glowMaterial}
-      />
+      {/* Atmospheric halo — large soft radial bloom behind center card */}
+      <mesh position={[0, 0, -0.08]} material={glowMaterial}>
+        <planeGeometry args={[11, 15]} />
+      </mesh>
       <mesh
         ref={meshRef}
         position={[0, 0, 0.014]}
         material={imageMaterial}
-        onPointerEnter={() => { hoveredRef.current = true; }}
-        onPointerLeave={() => { hoveredRef.current = false; }}
         onClick={() => onCardClick(index)}
       >
         <planeGeometry args={[4.15, 6.1]} />
@@ -226,15 +298,16 @@ function CarouselCard({ index, texture, rotStateRef, scaleRef, onCardClick }: Ca
 // ---------------------------------------------------------------------------
 // Spiral background decor
 // ---------------------------------------------------------------------------
-function SpiralDecor({ position = [0, 0, -4] as [number, number, number], rotStateRef }: { position?: [number, number, number]; rotStateRef: React.MutableRefObject<{ angle: number }> }) {
+function SpiralDecor({ position = [0, 0, -4] as [number, number, number], rotStateRef, phaseOffset = 0 }: { position?: [number, number, number]; rotStateRef: React.MutableRefObject<{ angle: number }>; phaseOffset?: number }) {
   const { scene: gltfScene } = useGLTF('/models/Spiral.glb', '/draco/');
   const groupRef = useRef<THREE.Group>(null!);
+  const spiralOpacityRef = useRef(0);
 
   // Do all setup in useMemo — runs synchronously during render before the scene
   // is attached to the R3F scenegraph, so Box3 sees NO parent transforms.
   // This prevents the "orbiting" bug caused by useFrame rotating the parent group
   // before useEffect's bbox centering runs.
-  const scene = useMemo(() => {
+  const { scene, meshes } = useMemo(() => {
     const s = gltfScene.clone(true);
 
     // Reset any transforms inherited from the cached gltfScene
@@ -255,26 +328,39 @@ function SpiralDecor({ position = [0, 0, -4] as [number, number, number], rotSta
     const maxDim = Math.max(size.x, size.y, size.z);
     if (maxDim > 0) s.scale.setScalar(14 / maxDim);
 
+    const meshList: THREE.Mesh[] = [];
     s.traverse((child: any) => {
       if (!child.isMesh) return;
       child.material = new THREE.MeshPhysicalMaterial({
-        color: new THREE.Color('#909098'),
-        metalness: 0.9,
-        roughness: 0.2,
-        envMapIntensity: 1.0,
+        color: new THREE.Color('#5868c8'),      // deep blue-violet — iridescent premium
+        metalness: 0.98,
+        roughness: 0.04,                        // near-mirror — catches lightformers sharply
+        envMapIntensity: 3.5,                   // picks up sapphire backlight + overhead strongly
+        emissive: new THREE.Color('#1828a0'),   // inner blue glow
+        emissiveIntensity: 0.18,
+        clearcoat: 1.0,
+        clearcoatRoughness: 0.02,
         transparent: true,
-        opacity: 0.45,
+        opacity: 0, // start invisible, driven by useFrame entrance
         side: THREE.DoubleSide,
         depthWrite: false,
       });
+      meshList.push(child);
     });
 
-    return s;
+    return { scene: s, meshes: meshList };
   }, [gltfScene]);
 
   useFrame(() => {
     if (!groupRef.current) return;
     groupRef.current.rotation.y = -rotStateRef.current.angle;
+    // Entrance fade-in: spiral appears first (entranceProgress 0 -> 0.4)
+    const ep = bestsellersSectionState.entranceProgress;
+    const target = smoothstep(0, 0.4, ep) * 0.72;
+    spiralOpacityRef.current = lerp(spiralOpacityRef.current, target, 0.06);
+    for (const m of meshes) {
+      (m.material as THREE.MeshPhysicalMaterial).opacity = spiralOpacityRef.current;
+    }
   });
 
   return (
@@ -293,38 +379,55 @@ interface SceneProps {
   hoverRef: React.MutableRefObject<boolean>;
   animatingRef: React.MutableRefObject<boolean>;
   onCardClick: (index: number) => void;
+  isMobile: boolean;
 }
 
-function CarouselScene({ rotStateRef, cardScaleRefs, hoverRef, animatingRef, onCardClick }: SceneProps) {
-  // Single product image used on all 5 cards
-  const imgTexture = useTexture('/bstest.jpg');
+function CarouselScene({ rotStateRef, cardScaleRefs, hoverRef, animatingRef, onCardClick, isMobile }: SceneProps) {
+  const imgTextures = useTexture([
+    '/images/bestsellers/bs1.jpg',
+    '/images/bestsellers/bs2.jpg',
+    '/images/bestsellers/bs3.jpg',
+    '/images/bestsellers/bs4.jpg',
+    '/images/bestsellers/bs5.jpg',
+  ]);
 
   return (
-    <>
+    <Selection>
+      <BSMouseTracker />
       <Environment background={false} resolution={256}>
         <Lightformer intensity={8} position={[0, 5, 0]} scale={[10, 2, 1]} color="#ffffff" />
         <Lightformer intensity={4} position={[-5, 1, 3]} color="#ddd4ff" />
         <Lightformer intensity={4} position={[5, 1, 3]} color="#e8e8e8" />
         <Lightformer intensity={3} position={[0, -3, 5]} color="#ffffff" />
         <Lightformer intensity={5} position={[0, 0, 8]} scale={[8, 4, 1]} color="#f0f0f5" />
+        <Lightformer intensity={3.5} position={[0, 2, -20]} scale={[60, 40, 1]} color="#1a50c8" />
       </Environment>
       <pointLight position={[5, 5, 5]} intensity={3} color="#ffffff" />
       <pointLight position={[-5, -5, 5]} intensity={3} color="#ffffff" />
-      <SpiralDecor position={[0, 7, -4]} rotStateRef={rotStateRef} />
-      <SpiralDecor position={[0, -7, -4]} rotStateRef={rotStateRef} />
+      {/* Deep background: rings + particles (no bloom, AdditiveBlending) */}
+      <BSAtmosphericRings />
+      <BSDriftParticles isMobile={isMobile} />
+
+      <SpiralDecor position={[0, 7, -4]} rotStateRef={rotStateRef} phaseOffset={0} />
+      <SpiralDecor position={[0, -7, -4]} rotStateRef={rotStateRef} phaseOffset={Math.PI} />
+
+      {/* Edge orbs: glow spheres at scene corners */}
+      <BSFloatingOrbs />
+
       <group position={[0, 0, 5]}>
         {Array.from({length: CARDS}, (_, i) => (
           <CarouselCard
             key={i}
             index={i}
-            texture={imgTexture}
+            texture={imgTextures[i]}
             rotStateRef={rotStateRef}
             scaleRef={cardScaleRefs[i]}
             onCardClick={onCardClick}
           />
         ))}
       </group>
-    </>
+      <BSPostFX isMobile={isMobile} />
+    </Selection>
   );
 }
 
@@ -356,8 +459,7 @@ export default function BestSellersCarousel({
         antialias: true,
         alpha: true,
         powerPreference: 'high-performance',
-        toneMapping: THREE.ACESFilmicToneMapping,
-        toneMappingExposure: 1.1,
+        toneMapping: THREE.NoToneMapping,
       }}
       style={{
         position: 'absolute',
@@ -373,6 +475,7 @@ export default function BestSellersCarousel({
         hoverRef={hoverRef}
         animatingRef={animatingRef}
         onCardClick={onCardClick}
+        isMobile={isMobile}
       />
     </Canvas>
   );

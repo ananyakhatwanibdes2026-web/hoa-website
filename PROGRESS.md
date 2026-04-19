@@ -1,5 +1,86 @@
 # HOUSE OF AN -- Progress Log
 
+## Session: 2026-04-17 (Unified Aurora + Scroll-Gap Compression)
+
+### Continuous Aurora Background [COMPLETE]
+Goal: merge Campaign + Lookbook backgrounds so the aurora reads as one continuous atmosphere, and intensify it (user said prior version was "looking too less").
+
+- [x] `app/components/sections/ContinuousAuroraCanvas.tsx` (NEW): shared `position:fixed` full-viewport Canvas2D that subscribes to BOTH `campaignSectionState` and `lookbookSectionState`. 4 desktop ribbons / 2 mobile, alpha 0.28-0.36, amp 0.11-0.15 (~70% boost over the old Lookbook-only aurora). `campaignAlpha = cAct ? smoothstep(0,0.10,cSp) : 0`; `lookbookEnter = cAct ? 1 : smoothstep(0,0.08,lSp)` (instant enter when campaign already feeds canvas); `lookbookExit = 1 - smoothstep(0.70,0.92,lSp)`; `alpha = max(campaignAlpha, lookbookAlpha)`. Phase driver stitches lookbook onto campaign (`lAct ? 1+lSp : cAct ? cSp : 0`) so ribbons keep evolving across the seam -- no visible reset at the boundary. Secondary `position:fixed` floor div rises to pure `#000` at lookbook exit for TestimonialsFooter handoff (peak `rgba(15,32,80,0.50)`). RAF gated by either section active; dpr cap [1,1.5]; reduced-motion renders a single static frame.
+- [x] `app/components/sections/CampaignMonolithBg.tsx` + `LookbookAuroraCanvas.tsx` DELETED.
+- [x] `app/components/sections/CampaignSection.tsx`: removed `CampaignMonolithBg` import + mount, removed the inline atmospheric radial-gradient glow div. Section is now purely heading + card stack over the shared aurora.
+- [x] `app/components/sections/LookbookSection.tsx`: removed `LookbookAuroraCanvas` import + mount. `.lookbook-visual` `background-color:transparent`.
+- [x] `app/routes/_index.tsx`: lazy import + mount `<ContinuousAuroraCanvas />` once, positioned just before the Campaign wrapper so it's in-DOM before either section activates.
+
+### Campaign-over-Why Overlap Fix [COMPLETE]
+User reported Campaign bleeding into Why's final frame.
+
+- [x] `_index.tsx`: Campaign wrapper `margin:'-60vh -1rem 0'` → `margin:'0 -1rem'` (no negative top). Campaign no longer encroaches on Why's pin-release zone.
+
+### Campaign Card1 Early-Exit Fix [COMPLETE]
+User reported Campaign's first card scrolling up before the section was reached.
+
+- [x] `CampaignSection.tsx`: timeline reworked from 3 units → 3.2 units. Added t=0.4→1.2 HOLD before card1 exit so user dwells on card1 after intro before motion begins. Card1 exit now at t=1.2→1.8 (~37% section scroll, was ~20%). Card2 exit + Card3 rise at t=1.8→2.4. Final HOLD t=2.4→3.2 on card3. Intro durations tightened (heading 0.28, stack 0.35).
+
+### Scroll-Gap Compression [COMPLETE]
+User: "lessen the scroll time between categories & why, campaign & lookbook".
+
+- [x] `_index.tsx`: Why wrapper `margin:'-60vh -1rem 0'` → `'-120vh -1rem 0'`. Lookbook wrapper same change. Each transition is now ~60vh shorter. The 120vh overlap consumes nearly the full pin-release zone (last 100vh) of the preceding section; later wrapper's own `position:relative; zIndex:1` + sticky inner takes visual priority during the ~20vh two-pinned-inners moment.
+- [x] Plan file: `/Users/boomshine/.claude/plans/bubbly-spinning-adleman.md`.
+
+### Lookbook Animating Before Reached [COMPLETE]
+After compression, the Lookbook carousel started scrubbing while Campaign was still pinned.
+
+- [x] `LookbookSection.tsx`: split into two ScrollTriggers. `stateST` (state + envelope) stays at `'top top → bottom bottom'` so aurora still gets full section progress. `animST` (carousel scrub) moved to `start:'top+=120vh top', end:'bottom bottom', scrub:0.08` -- carousel motion starts only after the 120vh Campaign overlap window clears.
+
+### Smoother Campaign↔Lookbook Transition [COMPLETE]
+User: "make transition smoother between categories and lookbook section" (actual pair was Campaign↔Lookbook — confirmed via visual seam).
+
+- [x] `CampaignSection.tsx`: envelope `smoothstep(0,0.06,sp)*(1-smoothstep(0.95,1,sp))` → `smoothstep(0,0.08,sp)*(1-smoothstep(0.85,1,sp))`. Exit ramp widened so Campaign dissolves over ~75vh instead of ~25vh.
+- [x] `LookbookSection.tsx`: envelope `smoothstep(0,0.08,sp)*(1-smoothstep(0.94,1,sp))` → `smoothstep(0.20,0.34,sp)*(1-smoothstep(0.88,1,sp))`. Enter ramp delayed + broadened so Lookbook only becomes visible as Campaign finishes dissolving, and both fades overlap through the 120vh shared window.
+
+### Docs Synced [COMPLETE]
+- [x] CLAUDE.md: "Scroll-reactive section backgrounds" bullet rewritten; CampaignSection.tsx, LookbookSection.tsx, `_index.tsx` entries updated; CampaignMonolithBg + LookbookAuroraCanvas entries replaced with single ContinuousAuroraCanvas entry.
+- [x] PROGRESS.md: this entry.
+- [x] ROADMAP.md + TODO.md: updated.
+
+---
+
+## Session: 2026-04-14 (AT UI Chrome)
+
+### Active Theory UI Chrome [COMPLETE]
+Root cause of previous session failure: 6 AT components were spec'd but never created. This session built and wired all of them.
+
+- [x] `app/styles/global-effects.css`: 8 new AT tokens added to :root (--at-glass-bg, --at-glass-border, --at-glass-blur, --at-radius-pill, --at-text-accent, --at-text-glow, --at-ease-out, --at-particle-dim). Mobile responsive CSS added for .nav-desktop-pills, .at-side-rail, .at-ambient-ticker, .at-corner-ticker.
+- [x] `app/components/global/Navigation.tsx`: Redesigned as split glass pills. Left pill (Shop/Collections), center wordmark "House of An" (Cormorant Garamond 300, letterSpacing 0.38em), right pill (About/Bag). Glass treatment: rgba(0,0,0,0.55) bg + blur(12px) + 1px rgba(255,255,255,0.14) border + border-radius 500px. Outer nav bar transparent (was applying glass to entire bar). nav-desktop-pills class hides on mobile.
+- [x] `app/components/global/SideRail.tsx` (NEW): Fixed left 24px, top 50%, z-index 90. 4 links: Bestsellers, Collections, Lookbook, About. DM Sans 0.52rem, letter-spacing 0.26em, uppercase, color var(--at-accent-bright). Opacity 0.5 default, 1 on hover + translateX(7px). Lenis scrollTo on click, scrollIntoView fallback. Home route only (useLocation check). Hidden on mobile via .at-side-rail CSS class.
+- [x] `app/routes/_index.tsx`: Anchor IDs added -- section-about (AboutSection wrapper), section-bestsellers (BestSellers wrapper), section-categories (Categories wrapper), section-lookbook (Lookbook wrapper).
+- [x] `app/components/global/AmbientTicker.tsx` (NEW): position:fixed bottom-left, mix-blend-mode:color-dodge, pointer-events:none. 5 brand lines (Contemporary Luxury / Recycled Silver / Made in India / Est. 2024 / House of An). Active line cycles every 4.5s with 0.5s fade. Inactive lines at opacity:0.18. DM Sans 0.55rem, letter-spacing 0.30em, uppercase, rgba(140,170,255,0.88). Mask gradient to top for natural fade. Hidden on mobile.
+- [x] `app/components/global/CornerTicker.tsx` (NEW): position:fixed bottom-right, mix-blend-mode:color-dodge, pointer-events:none. Marquee: "RECYCLED SILVER -- MADE IN MUMBAI -- READY TO SHIP -- EST. 2024 -- HOUSE OF AN". 22s linear infinite. Text repeated twice for seamless loop. Mask gradient fades left edge. Hidden on mobile.
+- [x] `app/components/global/RouteTransition.tsx` (NEW): position:fixed inset:0, z-index:200, black #000000 overlay. useNavigation() from react-router drives opacity: 0.25s ease-in on loading, 0.45s ease-out on idle. Eliminates white flash on route change. SceneCanvas stays mounted (lives in root.tsx Layout).
+- [x] `app/components/global/ParticleField.tsx` (NEW): THREE.Points, 12k desktop / 2.5k mobile, positions in 42x42x32 unit box. color #8ab0e8, size 0.045, sizeAttenuation, AdditiveBlending, depthWrite:false. Self-contained scrollRef + getScrollP() (same cachedHeight pattern as SceneCanvas). Fades out as scroll passes 22% (intensity = max(0, 1 - sp*4.5)). Max opacity 0.20.
+- [x] `app/components/global/SceneCanvas.tsx`: Imported ParticleField. Mounted in Scene() outside <Select> (not bloom-processed), gated by !heroGone: `{!heroGone && <ParticleField />}`.
+- [x] `app/root.tsx`: All 4 new components imported (SideRail, AmbientTicker, CornerTicker, RouteTransition) and rendered in Layout body in correct order: RouteTransition (z-200) > GlobalEffects > Navigation > SideRail > AmbientTicker > CornerTicker > SceneCanvas.
+- [x] Build verified: `npm run build` clean, no SSR errors, 1.92s.
+
+---
+
+## Session: 2026-04-11 (Active Theory Re-Theme)
+
+### AT Visual Re-Theme [COMPLETE]
+- [x] Studied activetheory.net reference (activetheory.md): black base, blue/periwinkle accents, no warm gold/silver
+- [x] `app/styles/global-effects.css`: --bg-primary #484858 -> #000000; body bg -> #000000; added --at-accent, --at-accent-bright, --at-blue-steel, --at-blue-silver tokens
+- [x] `app/components/global/BackgroundJourney.tsx`: COLOR_STOPS rewritten. Start: #000000 (was #484858). 50%: #080e1a (was #1c1c24). 68%: #1a2840 (was #383848). 82%+: #8ab0d0 cool-blue-silver (was #bebec0 warm silver). Text flip preserved at 82%.
+- [x] `app/components/global/SceneCanvas.tsx`: Fog initial #000000 (was #141820). Fog lerp branches updated to match new stops. Logo chrome: color #9098b0 (was #a8a8a8), emissive #5870a0 (was #a09890). Left lightformer: #b0ccff (was #ddd4ff). Front fill: #c0ccf0 (was #ccc8d8). Sapphire intensity: 3.5 (was 2.5).
+- [x] `app/components/sections/CategoriesSection.tsx`: Conic sweep + glow + hover all changed from warm gold (rgba(255,228,165)) to blue/periwinkle (rgba(96,128,224) / rgba(156,165,255)). Canvas network bg shifted blue-dark (#1a2038->#060c18). Network lines rgba(130,168,240).
+- [x] `app/components/sections/LookbookSection.tsx`: Frame border rgba(140,168,255,0.18) (was warm white). Conic sweep blue-periwinkle (was gold). Breathe glow rgba(80,120,220) (was gold). Initial bg #06122a, GSAP tween #06122a->#02040f (was #b8bcc4->#04091a).
+- [x] `app/components/sections/WhySection.tsx`: blackBgRef gradient #08101e->#5a80aa (was warm silver #1c1c22->#b0b0b8). Floor glow rgba(120,160,255) (was white).
+- [x] `app/components/sections/BestSellersSection.tsx`: Wipe gradient #0e1828->#8aaccc navy-to-blue-steel (was #1c1c28->#d4d4dc silver). Eyebrow rgba(140,170,240,0.65). Active dot rgba(140,170,240,0.88).
+- [x] `app/components/sections/TestimonialsFooterSection.tsx`: Section bg #8ab0d0->#1e3460 (was silver #b8bac6->#263d6a). Seamlessly joins BackgroundJourney 82% stop. Heading rgba(10,18,42,0.94).
+- [x] CLAUDE.md, TODO.md, ROADMAP.md, PROGRESS.md all updated with new color values
+
+### Image Placement [INCOMPLETE -- INTERRUPTED]
+- [ ] Test images from house-of-an-1 (Desktop) need to be placed: lookbook-labeled -> LookbookSection 6 slots, campaign-labeled -> CampaignSection 3 card slots, rest -> other image slots. No repeats.
+
 ## Phase 1: Foundation [COMPLETE]
 - [x] Shopify store set up (house-of-an-2.myshopify.com)
 - [x] Headless + Hydrogen sales channels installed

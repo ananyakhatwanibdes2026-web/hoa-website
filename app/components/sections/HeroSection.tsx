@@ -42,7 +42,7 @@ export function HeroSection() {
   return (
     <section
       style={{
-        height: '350vh',
+        height: '270vh',
         position: 'relative',
         overflow: 'hidden',
         padding: 0,

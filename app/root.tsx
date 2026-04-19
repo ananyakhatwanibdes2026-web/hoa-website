@@ -22,6 +22,10 @@ import fontsCss from '~/styles/fonts.css?url';
 import {PageLayout} from './components/PageLayout';
 import {GlobalEffects} from '~/components/global/GlobalEffects';
 import {Navigation} from '~/components/global/Navigation';
+import {SideRail} from '~/components/global/SideRail';
+import {AmbientTicker} from '~/components/global/AmbientTicker';
+import {CornerTicker} from '~/components/global/CornerTicker';
+import {RouteTransition} from '~/components/global/RouteTransition';
 
 const SceneCanvas = lazy(() => import('~/components/global/SceneCanvas'));
 
@@ -183,8 +187,12 @@ export function Layout({children}: {children?: React.ReactNode}) {
         <Links />
       </head>
       <body>
+        <RouteTransition />
         <GlobalEffects />
         <Navigation />
+        <SideRail />
+        <AmbientTicker />
+        <CornerTicker />
         <ClientOnly>
           <Suspense fallback={null}>
             <SceneCanvas />

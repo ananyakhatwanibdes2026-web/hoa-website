@@ -5,8 +5,16 @@ import {campaignSectionState} from '~/lib/sceneState';
 
 gsap.registerPlugin(ScrollTrigger);
 
+function smoothstep(edge0: number, edge1: number, x: number) {
+  const t = Math.min(1, Math.max(0, (x - edge0) / (edge1 - edge0)));
+  return t * t * (3 - 2 * t);
+}
+
 export default function CampaignSection() {
   const sectionRef = useRef<HTMLElement>(null!);
+  const visualRef = useRef<HTMLDivElement>(null!);
+  const headingRef = useRef<HTMLDivElement>(null!);
+  const stackRef = useRef<HTMLDivElement>(null!);
   const card1Ref = useRef<HTMLDivElement>(null!);
   const card2Ref = useRef<HTMLDivElement>(null!);
   const card3Ref = useRef<HTMLDivElement>(null!);
@@ -19,30 +27,57 @@ export default function CampaignSection() {
     const card2 = card2Ref.current;
     const card3 = card3Ref.current;
 
+    // Initial states for intro -- heading and stack start invisible
+    gsap.set(headingRef.current, {opacity: 0, y: 40});
+    gsap.set(stackRef.current, {opacity: 0, y: 50});
+
     // Depth layering: cards behind start slightly scaled down and shifted down
     gsap.set(card2, {scale: 0.97, y: 25});
     gsap.set(card3, {scale: 0.94, y: 45});
 
-    // t=0→1: card1 exits alone -- cards 2 & 3 stay put, revealed as card1 slides away
-    // t=1→2: card2 exits, card3 rises to focal (card3 behind card2 = correct z-order)
     const tl = gsap.timeline({paused: true});
 
-    // Card 1 exits straight up; cards 2 and 3 do NOT move during this phase
-    tl.to(card1, {y: '-110%', ease: 'none', duration: 1}, 0);
+    // t=0→0.4: INTRO -- heading then card stack rise in
+    tl.fromTo(
+      headingRef.current,
+      {opacity: 0, y: 40},
+      {opacity: 1, y: 0, duration: 0.28, ease: 'power2.out'},
+      0,
+    );
+    tl.fromTo(
+      stackRef.current,
+      {opacity: 0, y: 50},
+      {opacity: 1, y: 0, duration: 0.35, ease: 'power2.out'},
+      0.15,
+    );
 
-    // Card 2 exits (from its resting y:25 position upward)
-    tl.to(card2, {y: '-110%', ease: 'none', duration: 1}, 1);
+    // t=0.4→1.2: HOLD -- card1 sits at focal so user dwells on it before it moves
+    tl.to({}, {duration: 0.8}, 0.4);
 
-    // Card 3 rises to focal as card 2 exits (z:1 behind z:2 is intentional/correct)
-    tl.to(card3, {scale: 1.0, y: 0, ease: 'none', duration: 1}, 1);
+    // t=1.2→1.8: card1 exits alone -- cards 2 & 3 stay put, revealed as card1 slides away
+    tl.to(card1, {y: '-110%', ease: 'none', duration: 0.6}, 1.2);
+
+    // t=1.8→2.4: card2 exits, card3 rises to focal
+    tl.to(card2, {y: '-110%', ease: 'none', duration: 0.6}, 1.8);
+    tl.to(card3, {scale: 1.0, y: 0, ease: 'none', duration: 0.6}, 1.8);
+
+    // t=2.4→3.2: HOLD -- card3 sits at focal so it reads before the fade
+    tl.to({}, {duration: 0.8}, 2.4);
 
     const stateST = ScrollTrigger.create({
       trigger: section,
-      start: 'top 80%',
-      end: 'bottom 20%',
+      start: 'top top',
+      end: 'bottom bottom',
+      invalidateOnRefresh: true,
       onUpdate: (self) => {
         campaignSectionState.active = self.isActive;
         campaignSectionState.sectionProgress = self.progress;
+        const sp = self.progress;
+        // Widened exit ramp (was 0.95→1.0) so Campaign dissolves into Lookbook over ~75vh instead of 25vh.
+        const envelope = smoothstep(0, 0.08, sp) * (1 - smoothstep(0.85, 1, sp));
+        if (visualRef.current) {
+          visualRef.current.style.opacity = envelope.toFixed(3);
+        }
       },
       onLeave: () => {
         campaignSectionState.active = false;
@@ -56,7 +91,7 @@ export default function CampaignSection() {
       trigger: section,
       start: 'top top',
       end: 'bottom bottom',
-      scrub: 1,
+      scrub: 0.1,
       animation: tl,
     });
 
@@ -74,7 +109,7 @@ export default function CampaignSection() {
       <style>{`
         .campaign-section {
           position: relative;
-          height: 600vh;
+          height: 500vh;
         }
 
         .campaign-visual {
@@ -170,7 +205,7 @@ export default function CampaignSection() {
         /* Card 1: top */
         .campaign-card-1 {
           z-index: 3;
-          background: url('/lookbooktest.jpg') center / cover no-repeat;
+          background: url('/images/campaign/campaign1.png') center / cover no-repeat;
           box-shadow:
             0 30px 80px rgba(0,0,0,0.55),
             0 6px 20px rgba(0,0,0,0.30);
@@ -179,7 +214,7 @@ export default function CampaignSection() {
         /* Card 2: middle */
         .campaign-card-2 {
           z-index: 2;
-          background: url('/lookbooktest.jpg') center / cover no-repeat;
+          background: url('/images/campaign/campaign2.png') center / cover no-repeat;
           box-shadow:
             0 20px 60px rgba(0,0,0,0.45),
             0 4px 16px rgba(0,0,0,0.25);
@@ -188,7 +223,7 @@ export default function CampaignSection() {
         /* Card 3: bottom */
         .campaign-card-3 {
           z-index: 1;
-          background: url('/lookbooktest.jpg') center / cover no-repeat;
+          background: url('/images/campaign/campaign3.png') center / cover no-repeat;
           box-shadow:
             0 12px 40px rgba(0,0,0,0.35),
             0 3px 12px rgba(0,0,0,0.20);
@@ -238,8 +273,8 @@ export default function CampaignSection() {
         className="campaign-section"
         data-section="campaign"
       >
-        <div className="campaign-visual">
-          <div className="campaign-heading-wrap">
+        <div ref={visualRef} className="campaign-visual">
+          <div ref={headingRef} className="campaign-heading-wrap" style={{position: 'relative', zIndex: 1}}>
             <p className="campaign-eyebrow">The Visual</p>
             <h2 className="campaign-heading">
               {'LOOKBOOK'.split('').map((ch, i) => (
@@ -249,7 +284,7 @@ export default function CampaignSection() {
             <div className="campaign-heading-rule" />
           </div>
 
-          <div className="campaign-stack">
+          <div ref={stackRef} className="campaign-stack" style={{position: 'relative', zIndex: 1}}>
             {/* Card 3 -- bottom */}
             <div ref={card3Ref} className="campaign-card campaign-card-3">
               <div className="campaign-card-label">

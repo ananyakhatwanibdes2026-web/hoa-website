@@ -5,11 +5,27 @@ body > main {
 
 /* CSS custom properties for the design system */
 :root {
-  --bg-primary: #484858;
+  --bg-primary: #000000;
   --text-primary: #ffffff;
   --font-display: 'Cormorant Garamond', serif;
   --font-body: 'DM Sans', sans-serif;
   --font-handwritten: 'Caveat', cursive;
+
+  /* Active Theory-aligned blue accent tokens */
+  --at-accent: #6080e0;
+  --at-accent-bright: #9ca5ff;
+  --at-blue-steel: #1a2840;
+  --at-blue-silver: #8ab0d0;
+
+  /* Active Theory UI chrome tokens */
+  --at-glass-bg: rgba(0, 0, 0, 0.55);
+  --at-glass-border: rgba(255, 255, 255, 0.14);
+  --at-glass-blur: blur(12px);
+  --at-radius-pill: 500px;
+  --at-text-accent: #9ca5ff;
+  --at-text-glow: #00e5ff;
+  --at-ease-out: cubic-bezier(0.17, 0.4, 0.02, 0.99);
+  --at-particle-dim: rgba(140, 170, 240, 0.18);
 
   /* Testimonials + Footer section -- pastel palette */
   --tf-top-bg: #fef3f0;
@@ -24,7 +40,7 @@ body > main {
 /* Dark starting state -- prevents flash of white on load */
 html,
 body {
-  background-color: #484858;
+  background-color: #000000;
   color: var(--text-primary);
 }
 
@@ -76,6 +92,22 @@ html.lenis body {
 
   .nav-hamburger {
     display: flex !important;
+  }
+
+  .nav-desktop-pills {
+    display: none !important;
+  }
+
+  .at-side-rail {
+    display: none !important;
+  }
+
+  .at-ambient-ticker {
+    display: none !important;
+  }
+
+  .at-corner-ticker {
+    display: none !important;
   }
 }
 

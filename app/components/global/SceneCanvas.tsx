@@ -5,13 +5,14 @@ import {
   Environment,
   Lightformer,
 } from '@react-three/drei';
-import {EffectComposer, SelectiveBloom, Selection, Select} from '@react-three/postprocessing';
+import {EffectComposer, SelectiveBloom, Selection, Select, Vignette} from '@react-three/postprocessing';
 import * as THREE from 'three';
 import {getLenis} from '~/components/global/SmoothScroll';
 import {aboutSectionState, scenePhaseState} from '~/lib/sceneState';
+import {ParticleField} from '~/components/global/ParticleField';
 
 if (typeof window !== 'undefined') {
-  useGLTF.preload('/models/AN_Logo.glb', '/draco/');
+  useGLTF.preload('/models/Logo_element.glb', '/draco/');
   useGLTF.preload('/models/star.glb', '/draco/');
   useGLTF.preload('/models/rock.glb', '/draco/');
 }
@@ -29,13 +30,146 @@ function smoothstep(edge0: number, edge1: number, x: number) {
   return t * t * (3 - 2 * t);
 }
 
+// Cache scrollHeight to avoid forced layout reflow on every frame.
+// It's recomputed at most once per 500ms (covers resize events naturally).
+let _cachedDocHeight = 0;
+let _docHeightTs = 0;
+
 function getScrollProgress(): number {
-  const docHeight =
-    document.documentElement.scrollHeight - window.innerHeight;
-  if (docHeight <= 0) return 0;
+  const now = performance.now();
+  if (now - _docHeightTs > 500) {
+    _cachedDocHeight = document.documentElement.scrollHeight - window.innerHeight;
+    _docHeightTs = now;
+  }
+  if (_cachedDocHeight <= 0) return 0;
   const lenis = getLenis();
   const scrollTop = lenis ? (lenis as any).scroll : window.scrollY;
-  return Math.max(0, Math.min(1, scrollTop / docHeight));
+  return Math.max(0, Math.min(1, scrollTop / _cachedDocHeight));
+}
+
+// ---------------------------------------------------------------------------
+// Night sky atmospheric shader
+// ---------------------------------------------------------------------------
+
+const nightSkyVert = /* glsl */ `
+  varying vec2 vUv;
+  void main() {
+    vUv = uv;
+    gl_Position = vec4(position.xy, 1.0, 1.0);
+  }
+`;
+
+const nightSkyFrag = /* glsl */ `
+  precision mediump float;
+  uniform float uTime;
+  uniform float uScroll;
+  varying vec2  vUv;
+
+  float hash(vec2 p) {
+    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+  }
+  float vnoise(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(
+      mix(hash(i),               hash(i + vec2(1.0, 0.0)), f.x),
+      mix(hash(i + vec2(0.0,1.0)), hash(i + vec2(1.0, 1.0)), f.x),
+      f.y
+    );
+  }
+  float fbm(vec2 p) {
+    float v = 0.0, a = 0.5;
+    for (int i = 0; i < 4; i++) {
+      v += a * vnoise(p);
+      p  = p * 2.1 + vec2(3.4, 1.7);
+      a *= 0.5;
+    }
+    return v;
+  }
+
+  void main() {
+    vec2 uv = vUv;
+
+    // ---- Scroll-driven traveling light source ----
+    // Lissajous path: 3 horizontal x 2 vertical cycles across full scroll.
+    // Reduced amplitude keeps light away from extreme screen corners.
+    float lx = sin(uScroll * 18.85 + uTime * 0.06);
+    float ly = sin(uScroll * 12.57 + uTime * 0.05 + 1.57);
+    vec2 lightUV = vec2(lx * 0.42 + 0.5, ly * 0.30 + 0.5);
+
+    vec2 toLight = (uv - lightUV) * vec2(1.78, 1.0);
+    float lDist = length(toLight);
+
+    // Wider main spotlight — covers ~2x more screen area per section
+    float spotlight = exp(-lDist * lDist * 1.6) * 0.88;
+
+    // Broad secondary ambient — keeps far-from-light areas subtly lit
+    float ambient = exp(-lDist * lDist * 0.45) * 0.22;
+
+    // Breathing corona halos — two smooth rings that slowly pulse in radius
+    float r1 = 0.17 + sin(uTime * 0.38) * 0.018;
+    float r2 = 0.32 + sin(uTime * 0.27 + 1.1) * 0.024;
+    float halo1 = exp(-pow(lDist - r1, 2.0) * 88.0) * 0.55;
+    float halo2 = exp(-pow(lDist - r2, 2.0) * 48.0) * 0.30;
+    float corona = halo1 + halo2;
+
+    // ---- Ambient FBM aurora for scene depth (follows light horizontally) ----
+    float scrollCycle = sin(uScroll * 6.28 + uTime * 0.07) * 0.5 + 0.5;
+    vec2 q = vec2(
+      fbm(uv * vec2(2.5, 1.0) + vec2(uTime * 0.022, 0.0)),
+      fbm(uv * vec2(2.0, 1.2) + vec2(0.0, uTime * 0.018) + 1.7)
+    );
+    float aurora = fbm(uv * vec2(1.8, 5.5) + q * 0.9 + vec2(lx * 0.35, -uScroll * 2.5));
+    float band = smoothstep(0.02, 0.45, uv.y) * smoothstep(0.98, 0.55, uv.y);
+    aurora = clamp(aurora * band * 1.4, 0.0, 1.0) * scrollCycle;
+
+    // ---- Color ----
+    vec3 colDark   = vec3(0.004, 0.008, 0.022);  // near-black
+    vec3 colBlue   = vec3(0.08,  0.20,  0.62);   // bright blue spotlight
+    vec3 colAurora = vec3(0.025, 0.065, 0.200);  // darker blue for FBM depth
+
+    float intensity = spotlight + corona * 0.75 + ambient * 0.5 + aurora * 0.4;
+    vec3  col = colDark
+              + colBlue   * (spotlight + corona * 0.65 + ambient * 0.38)
+              + colAurora * aurora;
+    float alpha = clamp(intensity * 0.72, 0.0, 0.86);
+
+    gl_FragColor = vec4(col, alpha);
+  }
+`;
+
+function NightSkyShader() {
+  const matRef = useRef<THREE.ShaderMaterial>(null);
+  const uniforms = useMemo(
+    () => ({
+      uTime:   {value: 0},
+      uScroll: {value: 0},
+    }),
+    [],
+  );
+
+  useFrame(({clock}) => {
+    if (!matRef.current) return;
+    matRef.current.uniforms.uTime.value   = clock.getElapsedTime();
+    matRef.current.uniforms.uScroll.value = getScrollProgress();
+  });
+
+  return (
+    <mesh renderOrder={-100} frustumCulled={false}>
+      <planeGeometry args={[2, 2]} />
+      <shaderMaterial
+        ref={matRef}
+        uniforms={uniforms}
+        vertexShader={nightSkyVert}
+        fragmentShader={nightSkyFrag}
+        depthTest={false}
+        depthWrite={false}
+        transparent={true}
+        blending={THREE.AdditiveBlending}
+      />
+    </mesh>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -44,21 +178,8 @@ function getScrollProgress(): number {
 
 const mouseState = {x: 0, y: 0, lerpX: 0, lerpY: 0};
 
-// Star field entrance -- fires once on preloader-complete, staggered per-star
-let _starEntryActive = false;
+let _starEntryActive = true;
 let _starEntryTime = 0;
-if (typeof window !== 'undefined') {
-  window.addEventListener('preloader-complete', () => {
-    _starEntryActive = true;
-    _starEntryTime = performance.now();
-  }, {once: true});
-  setTimeout(() => {
-    if (!_starEntryActive) {
-      _starEntryActive = true;
-      _starEntryTime = performance.now();
-    }
-  }, 4000);
-}
 
 function MouseTracker() {
   useEffect(() => {
@@ -131,11 +252,11 @@ function ScenePhaseDriver() {
       0.15,
     );
 
-    const aboutLogoTarget = clamp01((aboutSectionState.sectionProgress - 0.45) / 0.35);
+    const aboutLogoTarget = clamp01(aboutSectionState.sectionProgress / 0.04);
     scenePhaseState.logoFade = lerp(
       scenePhaseState.logoFade,
       Math.max(aboutLogoTarget, targetLateFade),
-      0.12,
+      0.30,
     );
   });
 
@@ -146,12 +267,63 @@ function ScenePhaseDriver() {
 // AN Logo (persistent, subtle idle animation)
 // ---------------------------------------------------------------------------
 
+// Neutral studio cubemap baked once from offscreen area-light panels.
+// Assigned to the logo material so the chrome reflects a clean silver/white
+// studio rig, isolated from the scene-wide sapphire + aurora env.
+function useStudioChromeEnvMap() {
+  const gl = useThree((s) => s.gl);
+  return useMemo(() => {
+    const rt = new THREE.WebGLCubeRenderTarget(256, {
+      generateMipmaps: true,
+      minFilter: THREE.LinearMipmapLinearFilter,
+      format: THREE.RGBAFormat,
+      type: THREE.HalfFloatType,
+    });
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color('#050507');
+
+    const panel = (
+      w: number,
+      h: number,
+      pos: [number, number, number],
+      rot: [number, number, number],
+      hex: string,
+      intensity: number,
+    ) => {
+      const mat = new THREE.MeshBasicMaterial({
+        color: new THREE.Color(hex).multiplyScalar(intensity),
+        side: THREE.DoubleSide,
+        toneMapped: false,
+      });
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat);
+      m.position.set(...pos);
+      m.rotation.set(...rot);
+      scene.add(m);
+    };
+
+    panel(6, 2.2, [0, 3.2, 0], [Math.PI / 2, 0, 0], '#ffffff', 2.4);
+    panel(3.8, 5, [-3.8, 0, 1.2], [0, Math.PI / 2, 0], '#f2f4f8', 1.9);
+    panel(3.8, 5, [3.8, 0, 1.2], [0, -Math.PI / 2, 0], '#f2f4f8', 1.6);
+    panel(5, 3, [0, 0.2, 4.2], [0, 0, 0], '#e8eaf0', 1.2);
+    panel(5, 3, [0, 0.2, -4.2], [0, Math.PI, 0], '#dcdde2', 0.7);
+    panel(6, 6, [0, -3.2, 0], [-Math.PI / 2, 0, 0], '#0a0a0c', 0.2);
+
+    const cam = new THREE.CubeCamera(0.1, 50, rt);
+    scene.add(cam);
+    cam.update(gl, scene);
+
+    return rt.texture;
+  }, [gl]);
+}
+
 function LogoModel() {
-  const {scene} = useGLTF('/models/AN_Logo.glb', '/draco/');
+  const {scene} = useGLTF('/models/Logo_element.glb', '/draco/');
   const groupRef = useRef<THREE.Group>(null!);
   const scrollRef = useRef(0);
   const logoMatsRef = useRef<THREE.MeshPhysicalMaterial[]>([]);
   const rotYRef = useRef(0);
+  const envMap = useStudioChromeEnvMap();
 
   useEffect(() => {
     scene.rotation.set(-Math.PI / 2 + Math.PI, 0, Math.PI + Math.PI);
@@ -160,14 +332,15 @@ function LogoModel() {
     scene.traverse((child: any) => {
       if (!child.isMesh) return;
       const mat = new THREE.MeshPhysicalMaterial({
-        color: new THREE.Color('#a8a8a8'),
+        color: new THREE.Color('#eef0f2'),
         metalness: 1.0,
-        roughness: 0.12,
-        envMapIntensity: 0.5,
-        emissive: new THREE.Color('#a09890'),
-        emissiveIntensity: 0.12,
-        clearcoat: 0.2,
-        clearcoatRoughness: 0.06,
+        roughness: 0.16,
+        envMap,
+        envMapIntensity: 1.0,
+        emissive: new THREE.Color('#000000'),
+        emissiveIntensity: 0.0,
+        clearcoat: 0.0,
+        clearcoatRoughness: 0.0,
         transparent: true,
         opacity: 1,
       });
@@ -192,12 +365,14 @@ function LogoModel() {
       meshes[0].position.x -= 0.3;
       meshes[meshes.length - 1].position.x += 0.3;
     }
-  }, [scene]);
+  }, [scene, envMap]);
 
   useFrame((state) => {
     if (!groupRef.current) return;
-    const t = state.clock.elapsedTime;
     const logoFade = scenePhaseState.logoFade;
+    // Logo is fully invisible -- skip all lerps, rotation, scale, and material writes
+    if (logoFade >= 0.99) return;
+    const t = state.clock.elapsedTime;
 
     const sp = getScrollProgress();
     scrollRef.current = lerp(scrollRef.current, sp, 0.06);
@@ -208,7 +383,7 @@ function LogoModel() {
     groupRef.current.rotation.y = rotYRef.current;
 
     const breathe = 1.0 + Math.sin(t * 0.4) * 0.01;
-    groupRef.current.scale.setScalar(1.4 * lerp(1.0, 2.0, smoothSp) * breathe);
+    groupRef.current.scale.setScalar(1.4 * Math.max(0.05, 1.0 - smoothSp * 3.0) * breathe);
 
     const logoOpacity = 1 - logoFade;
     for (const mat of logoMatsRef.current) {
@@ -230,17 +405,7 @@ function LogoModel() {
 function ScrollCamera() {
   const {camera} = useThree();
   const scrollRef = useRef(0);
-  const introRef = useRef({active: false, progress: 0, started: false});
-
-  useEffect(() => {
-    const handler = () => {
-      introRef.current.active = true;
-      introRef.current.progress = 0;
-      introRef.current.started = true;
-    };
-    window.addEventListener('preloader-complete', handler);
-    return () => window.removeEventListener('preloader-complete', handler);
-  }, []);
+  const introRef = useRef({active: true, progress: 0, started: true});
 
   useFrame((state, delta) => {
     const intro = introRef.current;
@@ -331,7 +496,7 @@ function AnimatedEnvironment() {
         position={[-10, 5, -5]}
         rotation-y={Math.PI / 4}
         scale={[5, 20, 1]}
-        color="#ddd4ff"
+        color="#b0ccff"
       />
       <Lightformer
         intensity={3}
@@ -344,7 +509,7 @@ function AnimatedEnvironment() {
         intensity={1.5}
         position={[0, 0, 12]}
         scale={[30, 20, 1]}
-        color="#ccc8d8"
+        color="#c0ccf0"
       />
       <Lightformer
         intensity={0.3}
@@ -354,7 +519,7 @@ function AnimatedEnvironment() {
         color="#080808"
       />
       <Lightformer
-        intensity={2.5}
+        intensity={3.5}
         position={[0, 2, -10]}
         scale={[60, 40, 1]}
         color="#1a50c8"
@@ -372,7 +537,7 @@ function AtmosphericFog() {
   const scrollRef = useRef(0);
 
   useEffect(() => {
-    scene.fog = new THREE.FogExp2('#141820', 0.012);
+    scene.fog = new THREE.FogExp2('#000000', 0.012);
     return () => {
       scene.fog = null;
     };
@@ -384,50 +549,28 @@ function AtmosphericFog() {
     scrollRef.current = lerp(scrollRef.current, sp, 0.04);
     const fog = scene.fog as THREE.FogExp2;
 
-    if (scrollRef.current < 0.04) {
-      // Silver -> blue (quick)
-      const t = scrollRef.current / 0.04;
-      fog.color.setRGB(
-        lerp(0.078, 0.031, t),
-        lerp(0.094, 0.063, t),
-        lerp(0.125, 0.118, t),
-      );
-    } else if (scrollRef.current < 0.13) {
-      // Hold blue
-      fog.color.setRGB(0.031, 0.063, 0.118);
-    } else if (scrollRef.current < 0.25) {
-      // Blue -> black
-      const t = (scrollRef.current - 0.13) / 0.12;
-      fog.color.setRGB(
-        lerp(0.031, 0.020, t),
-        lerp(0.063, 0.020, t),
-        lerp(0.118, 0.020, t),
-      );
-    } else if (scrollRef.current < 0.68) {
-      // Black -> medium steel
-      const t = Math.max(0, (scrollRef.current - 0.25) / 0.43);
-      fog.color.setRGB(
-        lerp(0.020, 0.220, t),
-        lerp(0.020, 0.220, t),
-        lerp(0.020, 0.282, t),
-      );
-    } else if (scrollRef.current < 0.82) {
-      // Medium steel -> polished silver
-      const t = (scrollRef.current - 0.68) / 0.14;
-      fog.color.setRGB(
-        lerp(0.220, 0.745, t),
-        lerp(0.220, 0.745, t),
-        lerp(0.282, 0.753, t),
-      );
-    } else {
-      fog.color.set('#bebec0');
-    }
+    // Continuous sinusoidal oscillation throughout full scroll (3 cycles per 100%)
+    // Synced with NightSkyShader's scrollCycle and BackgroundJourney rhythm
+    const cycle = Math.sin(scrollRef.current * 18.85) * 0.5 + 0.5;
+    fog.color.setRGB(
+      lerp(0.000, 0.059, cycle),  // black -> #0f2050 R
+      lerp(0.000, 0.125, cycle),  // black -> #0f2050 G
+      lerp(0.008, 0.314, cycle),  // dark blue-black -> #0f2050 B
+    );
   });
 
   return null;
 }
 
-function AdaptivePostFX({isMobile}: {isMobile: boolean}) {
+function AdaptivePostFX({isMobile, heroGone}: {isMobile: boolean; heroGone: boolean}) {
+  if (heroGone) {
+    // Stars + rocks are unmounted -- no bloom needed. Drop MSAA + bloom pass entirely.
+    return (
+      <EffectComposer multisampling={0} autoClear={false}>
+        <Vignette eskil={false} offset={0.25} darkness={0.75} />
+      </EffectComposer>
+    );
+  }
   return (
     <EffectComposer multisampling={isMobile ? 0 : 4} autoClear={false}>
       <SelectiveBloom
@@ -436,6 +579,7 @@ function AdaptivePostFX({isMobile}: {isMobile: boolean}) {
         luminanceSmoothing={0.9}
         intensity={isMobile ? 0.35 : 0.55}
       />
+      <Vignette eskil={false} offset={0.25} darkness={0.75} />
     </EffectComposer>
   );
 }
@@ -745,8 +889,25 @@ function RockField({isMobile}: {isMobile: boolean}) {
 // ---------------------------------------------------------------------------
 
 function Scene({isMobile}: {isMobile: boolean}) {
+  const [heroGone, setHeroGone] = useState(false);
+  const heroGoneRef = useRef(false);
+
+  // Unmount stars+rocks once they've fully faded (scroll >30%).
+  // Remount if user scrolls back into hero (<15%). Hysteresis prevents flicker.
+  useFrame(() => {
+    const sp = getScrollProgress();
+    if (!heroGoneRef.current && sp > 0.30) {
+      heroGoneRef.current = true;
+      setHeroGone(true);
+    } else if (heroGoneRef.current && sp < 0.15) {
+      heroGoneRef.current = false;
+      setHeroGone(false);
+    }
+  });
+
   return (
     <Selection>
+      <NightSkyShader />
       <AnimatedEnvironment />
       <AtmosphericFog />
       <ScenePhaseDriver />
@@ -754,14 +915,19 @@ function Scene({isMobile}: {isMobile: boolean}) {
       <MouseTracker />
       <ScrollCamera />
 
-      {/* Stars + rocks selected for bloom -- logo is outside Select so it never blooms */}
-      <Select enabled>
-        <StarField isMobile={isMobile} />
-        <RockField isMobile={isMobile} />
-      </Select>
+      {/* Stars + rocks: hero-only. Unmounted past scroll 30% -- fully invisible by then. */}
+      {!heroGone && (
+        <Select enabled>
+          <StarField isMobile={isMobile} />
+          <RockField isMobile={isMobile} />
+        </Select>
+      )}
+      {/* Particle field: volumetric blue drift, hero zone only, outside Select (not bloomed) */}
+      {!heroGone && <ParticleField />}
+
       <LogoModel />
 
-      <AdaptivePostFX isMobile={isMobile} />
+      <AdaptivePostFX isMobile={isMobile} heroGone={heroGone} />
     </Selection>
   );
 }

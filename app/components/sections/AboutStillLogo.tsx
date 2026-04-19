@@ -4,11 +4,11 @@ import {Environment, Lightformer, useGLTF} from '@react-three/drei';
 import * as THREE from 'three';
 
 if (typeof window !== 'undefined') {
-  useGLTF.preload('/models/AN_Logo.glb', '/draco/');
+  useGLTF.preload('/models/Logo_element.glb', '/draco/');
 }
 
 function AboutLogoMesh() {
-  const {scene: gltfScene} = useGLTF('/models/AN_Logo.glb', '/draco/');
+  const {scene: gltfScene} = useGLTF('/models/Logo_element.glb', '/draco/');
   // Clone so material mutations don't affect the shared cached scene used by SceneCanvas
   const scene = useMemo(() => gltfScene.clone(true), [gltfScene]);
   const groupRef = useRef<THREE.Group>(null!);

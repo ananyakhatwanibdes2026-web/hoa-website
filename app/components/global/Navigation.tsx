@@ -8,20 +8,29 @@ const MENU_LINKS = [
   {label: 'Bag', to: '/cart'},
 ];
 
+const PILL_STYLE: React.CSSProperties = {
+  background: 'var(--at-glass-bg)',
+  border: '1px solid var(--at-glass-border)',
+  backdropFilter: 'var(--at-glass-blur)',
+  WebkitBackdropFilter: 'var(--at-glass-blur)',
+  borderRadius: 'var(--at-radius-pill)',
+  padding: '9px 22px',
+  display: 'flex',
+  gap: '1.8rem',
+  alignItems: 'center',
+};
+
 export function Navigation() {
   const [scrollProgress, setScrollProgress] = useState(0);
   const [visible, setVisible] = useState(true);
-  const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const lastScrollRef = useRef(0);
   const location = useLocation();
 
-  // Close menu on route change
   useEffect(() => {
     setMenuOpen(false);
   }, [location.pathname]);
 
-  // Lock body scroll when menu is open
   useEffect(() => {
     document.body.style.overflow = menuOpen ? 'hidden' : '';
     return () => {
@@ -37,10 +46,8 @@ export function Navigation() {
         document.documentElement.scrollHeight - window.innerHeight,
       );
       setScrollProgress(y / maxScroll);
-      setScrolled(y > 60);
 
       if (y > 200) {
-        // Hide on scroll down, show on scroll up
         setVisible(y < lastScrollRef.current);
       } else {
         setVisible(true);
@@ -54,15 +61,13 @@ export function Navigation() {
 
   // Coin spin: 2 full rotations across full-page scroll
   const coinAngle = scrollProgress * 720;
-  // Distortion peaks at 90deg (edge-on), zero at 0/180deg (face-on)
   const glassScale = Math.abs(Math.sin((coinAngle * Math.PI) / 180)) * 56;
   const isSpinning = glassScale > 8;
-  // Chromatic aberration shift in px, based on spin angle
   const caShift = Math.round(glassScale * 0.06);
 
   return (
     <>
-      {/* SVG liquid glass filter -- always in DOM */}
+      {/* SVG liquid glass filter */}
       <svg
         aria-hidden="true"
         style={{
@@ -95,6 +100,7 @@ export function Navigation() {
 
       {/* Nav bar */}
       <nav
+        className="hoa-nav"
         style={{
           position: 'fixed',
           top: 0,
@@ -105,57 +111,54 @@ export function Navigation() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '0 clamp(1.5rem, 4vw, 3.5rem)',
-          transition:
-            'transform 0.45s cubic-bezier(0.4, 0, 0.2, 1), background 0.4s ease',
+          padding: '0 clamp(1.2rem, 3.5vw, 3rem)',
+          transition: 'transform 0.45s cubic-bezier(0.4, 0, 0.2, 1)',
           transform: visible || menuOpen ? 'translateY(0)' : 'translateY(-100%)',
-          background: scrolled ? 'rgba(8, 5, 20, 0.58)' : 'transparent',
-          backdropFilter: scrolled ? 'blur(20px)' : 'none',
-          WebkitBackdropFilter: scrolled ? 'blur(20px)' : 'none',
-          borderBottom: `1px solid ${scrolled ? 'rgba(255,255,255,0.07)' : 'transparent'}`,
+          background: 'transparent',
         }}
       >
-        {/* Desktop left links */}
-        <div
-          className="nav-desktop-links"
-          style={{display: 'flex', gap: '2.5rem', flex: 1}}
-        >
+        {/* Left pill: Shop + Collections */}
+        <div className="nav-desktop-pills" style={PILL_STYLE}>
           <NavLink to="/collections/all">Shop</NavLink>
           <NavLink to="/collections">Collections</NavLink>
         </div>
 
+        {/* Center wordmark */}
+        <div
+          className="nav-desktop-pills"
+          style={{
+            position: 'absolute',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            fontFamily: '"Cormorant Garamond", serif',
+            fontWeight: 300,
+            fontSize: '0.76rem',
+            letterSpacing: '0.38em',
+            textTransform: 'uppercase',
+            color: 'rgba(255,255,255,0.72)',
+            pointerEvents: 'none',
+            whiteSpace: 'nowrap',
+            userSelect: 'none',
+          }}
+        >
+          House of An
+        </div>
 
-        {/* Right side */}
+        {/* Right pill: About + Bag */}
+        <div className="nav-desktop-pills" style={PILL_STYLE}>
+          <NavLink to="/about">About</NavLink>
+          <NavLink to="/cart">Bag</NavLink>
+        </div>
+
+        {/* Mobile right side: bag icon + hamburger */}
         <div
           style={{
             display: 'flex',
-            gap: '2rem',
+            gap: '1.2rem',
             alignItems: 'center',
-            flex: 1,
-            justifyContent: 'flex-end',
+            marginLeft: 'auto',
           }}
         >
-          <NavLink to="/about" className="nav-desktop-links">
-            About
-          </NavLink>
-          {/* Desktop bag */}
-          <Link
-            to="/cart"
-            className="nav-desktop-links"
-            style={{
-              fontFamily: '"DM Sans", sans-serif',
-              fontSize: '0.65rem',
-              letterSpacing: '0.25em',
-              textTransform: 'uppercase',
-              color: 'var(--text-primary, #ffffff)',
-              textDecoration: 'none',
-              opacity: 0.7,
-              transition: 'opacity 0.25s ease',
-            }}
-          >
-            Bag
-          </Link>
-          {/* Mobile bag icon */}
           <Link
             to="/cart"
             className="nav-mobile-only"
@@ -169,7 +172,6 @@ export function Navigation() {
           >
             <BagIcon />
           </Link>
-          {/* Hamburger -- mobile only */}
           <HamburgerButton
             open={menuOpen}
             onToggle={() => setMenuOpen((v) => !v)}
@@ -177,7 +179,7 @@ export function Navigation() {
         </div>
       </nav>
 
-      {/* Full-screen menu overlay */}
+      {/* Full-screen overlay menu */}
       <FullScreenMenu open={menuOpen} onClose={() => setMenuOpen(false)} />
     </>
   );
@@ -186,27 +188,30 @@ export function Navigation() {
 function NavLink({
   to,
   children,
-  className,
 }: {
   to: string;
   children: React.ReactNode;
-  className?: string;
 }) {
   return (
     <Link
       to={to}
       prefetch="intent"
-      className={className}
       style={{
         fontFamily: '"DM Sans", sans-serif',
-        fontSize: '0.65rem',
+        fontSize: '0.62rem',
         fontWeight: 400,
-        letterSpacing: '0.25em',
+        letterSpacing: '0.22em',
         textTransform: 'uppercase',
         color: 'var(--text-primary, #ffffff)',
         textDecoration: 'none',
-        opacity: 0.7,
-        transition: 'opacity 0.25s ease',
+        opacity: 0.72,
+        transition: 'opacity 0.22s ease',
+      }}
+      onMouseEnter={(e) => {
+        (e.currentTarget as HTMLAnchorElement).style.opacity = '1';
+      }}
+      onMouseLeave={(e) => {
+        (e.currentTarget as HTMLAnchorElement).style.opacity = '0.72';
       }}
     >
       {children}
@@ -327,7 +332,6 @@ function FullScreenMenu({
           }}
         >
           {label}
-          {/* Hairline underline that draws in */}
           <span
             style={{
               display: 'block',
@@ -341,7 +345,6 @@ function FullScreenMenu({
         </Link>
       ))}
 
-      {/* Footer detail */}
       <div
         style={{
           position: 'absolute',

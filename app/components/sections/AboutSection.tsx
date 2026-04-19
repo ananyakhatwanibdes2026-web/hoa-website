@@ -12,7 +12,6 @@ export function AboutSection() {
   const rightRef = useRef<HTMLDivElement>(null);
   const wordsRef = useRef<(HTMLDivElement | null)[]>([]);
   const itemsRef = useRef<(HTMLElement | null)[]>([]);
-  const blackBgRef = useRef<HTMLDivElement>(null);
   const logoContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -20,78 +19,79 @@ export function AboutSection() {
     if (!section) return;
 
     const ctx = gsap.context(() => {
-      const tl = gsap.timeline({
-        scrollTrigger: {
-          trigger: section,
-          start: 'top 78%',
-          end: 'bottom 5%',
-          scrub: 1,
-        },
-      });
+      // Paused timeline driven by ScrollTrigger scrub (sticky scroll pattern)
+      const tl = gsap.timeline({paused: true});
 
-      // Logo fades in with the first word
+      // Logo fades in first
       if (logoContainerRef.current) {
         tl.fromTo(
           logoContainerRef.current,
           {opacity: 0},
-          {opacity: 1, duration: 0.2, ease: 'power2.out'},
+          {opacity: 1, duration: 0.18, ease: 'power2.out'},
           0.0,
         );
       }
 
       // Sequential word reveal: THE -> REFINED -> REBELLION
-      const wordPositions = [0.0, 0.15, 0.30];
+      // Spread across first 40% of scroll so each word has breathing room
+      const wordPositions = [0.04, 0.16, 0.28];
       wordsRef.current.forEach((el, i) => {
         if (!el) return;
         tl.fromTo(
           el,
-          {y: 40, opacity: 0},
-          {y: 0, opacity: 1, duration: 0.12, ease: 'power2.out'},
+          {y: 50, opacity: 0},
+          {y: 0, opacity: 1, duration: 0.14, ease: 'power2.out'},
           wordPositions[i],
         );
       });
 
-      // Right items: staggered fade + lift (after all words visible)
+      // Subtle upward parallax on the words container — runs while content is visible
+      // Creates a sense of depth: words drift gently upward as user scrolls through
+      if (leftRef.current) {
+        tl.to(
+          leftRef.current,
+          {y: -28, ease: 'none', duration: 0.84},
+          0.04,
+        );
+      }
+
+      // Right column: stagger in after REBELLION appears
       itemsRef.current.forEach((el, i) => {
         if (!el) return;
         tl.fromTo(
           el,
           {y: 20, opacity: 0},
-          {y: 0, opacity: 1, duration: 0.22, ease: 'power2.out'},
-          0.0 + i * 0.07,
+          {y: 0, opacity: 1, duration: 0.16, ease: 'power2.out'},
+          0.40 + i * 0.06,
         );
       });
 
-      // Exit: fade + slide up together
+      // Exit: all content fades + slides up together
+      // Sits at position 0.82 — gives a long dwell (~40% of scroll) where everything is visible
       tl.to(
-        [...wordsRef.current.filter(Boolean), rightRef.current, logoContainerRef.current].filter(Boolean),
+        [
+          ...wordsRef.current.filter(Boolean),
+          rightRef.current,
+          logoContainerRef.current,
+        ].filter(Boolean),
         {opacity: 0, y: -32, duration: 0.12, ease: 'power2.in'},
-        0.88,
+        0.90,
       );
 
-      // Black bg fades in just as the section enters -- starting before THE appears
-      if (blackBgRef.current) {
-        gsap.fromTo(
-          blackBgRef.current,
-          {opacity: 0},
-          {
-            opacity: 1,
-            ease: 'none',
-            scrollTrigger: {
-              trigger: section,
-              start: 'top 90%',
-              end: 'top 25%',
-              scrub: 1,
-            },
-          },
-        );
-      }
-
-      // Logo section-awareness: update shared state for SceneCanvas
+      // Wire timeline to scroll — outer section 250vh, sticky inner 100vh = 150vh scrub distance
       ScrollTrigger.create({
         trigger: section,
-        start: 'top 70%',
-        end: 'bottom 30%',
+        start: 'top top',
+        end: 'bottom bottom',
+        scrub: 1,
+        animation: tl,
+      });
+
+      // Section awareness for SceneCanvas logo fade
+      ScrollTrigger.create({
+        trigger: section,
+        start: 'top top',
+        end: 'bottom bottom',
         onToggle: (self) => {
           aboutSectionState.active = self.isActive;
         },
@@ -110,187 +110,170 @@ export function AboutSection() {
     <section
       ref={sectionRef}
       style={{
-        height: '100vh',
+        height: '250vh',
         position: 'relative',
-        overflow: 'hidden',
+        overflow: 'visible',
         pointerEvents: 'none',
       }}
     >
-      {/* Pure black background overlay -- fades in after REBELLION */}
+      {/* Sticky inner viewport -- stays pinned while outer 250vh scrolls */}
       <div
-        ref={blackBgRef}
         style={{
-          position: 'absolute',
-          inset: 0,
-          zIndex: -1,
-          pointerEvents: 'none',
-          opacity: 0,
-          background: 'linear-gradient(to bottom, #060608 0%, #0c0c12 40%, #1a1a22 65%, #2c2c3a 85%, #383848 100%)',
-        }}
-      />
-
-      {/* LEFT: large background tagline */}
-      <div
-        ref={leftRef}
-        style={{
-          position: 'absolute',
-          left: isMobile ? '3vw' : '3.5vw',
-          top: isMobile ? '18%' : '22%',
-          transform: 'none',
-          zIndex: 1,
-          pointerEvents: 'none',
-          lineHeight: 1.05,
-          userSelect: 'none',
+          position: 'sticky',
+          top: 0,
+          height: '100vh',
+          overflow: 'visible',
         }}
       >
-        {['THE', 'REFINED', 'REBELLION'].map((word, i) => (
+        {/* LEFT: large background tagline */}
+        <div
+          ref={leftRef}
+          style={{
+            position: 'absolute',
+            left: isMobile ? '3vw' : '3.5vw',
+            top: isMobile ? '18%' : '22%',
+            transform: 'none',
+            zIndex: 1,
+            pointerEvents: 'none',
+            lineHeight: 1.05,
+            userSelect: 'none',
+          }}
+        >
+          {['THE', 'REFINED', 'REBELLION'].map((word, i) => (
+            <div
+              key={word}
+              ref={(el) => {
+                wordsRef.current[i] = el;
+              }}
+              style={{
+                fontFamily: "'Barlow', sans-serif",
+                fontWeight: 800,
+                fontSize: isMobile
+                  ? 'clamp(2rem, 9vw, 3rem)'
+                  : 'clamp(3rem, 5.8vw, 7rem)',
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                color: '#ffffff',
+                textShadow:
+                  '0 0 20px rgba(255,255,255,0.8), 0 0 40px rgba(255,255,255,0.5), 0 0 80px rgba(255,255,255,0.2)',
+                display: 'block',
+                whiteSpace: 'nowrap',
+                opacity: 0,
+              }}
+            >
+              {word}
+            </div>
+          ))}
+        </div>
+
+        {/* CENTER: static AN logo */}
+        <div
+          ref={logoContainerRef}
+          style={{
+            position: 'absolute',
+            left: '50%',
+            top: '43%',
+            transform: 'translate(-50%, -50%)',
+            zIndex: 1,
+            pointerEvents: 'none',
+            opacity: 0,
+          }}
+        >
+          <AboutStillLogo />
+        </div>
+
+        {/* RIGHT: clean text block */}
+        <div
+          ref={rightRef}
+          style={{
+            position: 'absolute',
+            right: isMobile ? '4vw' : '6vw',
+            top: isMobile ? 'auto' : '43%',
+            bottom: isMobile ? '10%' : 'auto',
+            transform: isMobile ? 'none' : 'translateY(-50%)',
+            width: isMobile
+              ? 'clamp(200px, 72vw, 300px)'
+              : 'clamp(240px, 28vw, 400px)',
+            zIndex: 2,
+            pointerEvents: 'none',
+          }}
+        >
+          {/* Founded label */}
           <div
-            key={word}
             ref={(el) => {
-              wordsRef.current[i] = el;
+              itemsRef.current[0] = el;
             }}
             style={{
-              fontFamily: "'Barlow', sans-serif",
-              fontWeight: 800,
-              fontSize: isMobile
-                ? 'clamp(2rem, 9vw, 3rem)'
-                : 'clamp(3rem, 5.8vw, 7rem)',
-              letterSpacing: '0.08em',
+              fontFamily: "'DM Sans', sans-serif",
+              fontWeight: 400,
+              fontSize: '0.6rem',
+              letterSpacing: '0.24em',
               textTransform: 'uppercase',
-              color: '#ffffff',
-              textShadow:
-                '0 0 20px rgba(255,255,255,0.8), 0 0 40px rgba(255,255,255,0.5), 0 0 80px rgba(255,255,255,0.2)',
-              display: 'block',
-              whiteSpace: 'nowrap',
+              color: 'rgba(255,255,255,0.42)',
+              marginBottom: '1.5rem',
               opacity: 0,
             }}
           >
-            {word}
+            Founded in 2012
           </div>
-        ))}
-      </div>
 
-      {/* CENTER: static AN logo */}
-      <div
-        ref={logoContainerRef}
-        style={{
-          position: 'absolute',
-          left: '50%',
-          top: '43%',
-          transform: 'translate(-50%, -50%)',
-          zIndex: 1,
-          pointerEvents: 'none',
-          opacity: 0,
-        }}
-      >
-        <AboutStillLogo />
-      </div>
+          {/* Thin divider */}
+          <div
+            ref={(el) => {
+              itemsRef.current[1] = el;
+            }}
+            style={{
+              width: '28px',
+              height: '1px',
+              background: 'rgba(255,255,255,0.25)',
+              marginBottom: '1.5rem',
+              opacity: 0,
+            }}
+          />
 
-      {/* RIGHT: clean text block */}
-      <div
-        ref={rightRef}
-        style={{
-          position: 'absolute',
-          right: isMobile ? '4vw' : '6vw',
-          top: isMobile ? 'auto' : '43%',
-          bottom: isMobile ? '10%' : 'auto',
-          transform: isMobile ? 'none' : 'translateY(-50%)',
-          width: isMobile
-            ? 'clamp(200px, 72vw, 300px)'
-            : 'clamp(240px, 28vw, 400px)',
-          zIndex: 2,
-          pointerEvents: 'none',
-        }}
-      >
-        {/* Founded label */}
-        <div
-          ref={(el) => {
-            itemsRef.current[0] = el;
-          }}
-          style={{
-            fontFamily: "'DM Sans', sans-serif",
-            fontWeight: 400,
-            fontSize: '0.6rem',
-            letterSpacing: '0.24em',
-            textTransform: 'uppercase',
-            color: 'rgba(255,255,255,0.42)',
-            marginBottom: '1.5rem',
-            opacity: 0,
-          }}
-        >
-          Founded in 2012
+          {/* Primary paragraph */}
+          <div
+            ref={(el) => {
+              itemsRef.current[2] = el;
+            }}
+            style={{
+              fontFamily: "'DM Sans', sans-serif",
+              fontWeight: 400,
+              fontSize: 'clamp(0.72rem, 0.9vw, 0.88rem)',
+              lineHeight: 1.45,
+              letterSpacing: '0.06em',
+              textTransform: 'uppercase',
+              color: '#ffffff',
+              marginBottom: '1.6rem',
+              opacity: 0,
+            }}
+          >
+            We blend story, art &amp; technology as an in-house team of passionate
+            makers.
+          </div>
+
+          {/* Secondary paragraph */}
+          <div
+            ref={(el) => {
+              itemsRef.current[3] = el;
+            }}
+            style={{
+              fontFamily: "'DM Sans', sans-serif",
+              fontWeight: 400,
+              fontSize: 'clamp(0.72rem, 0.9vw, 0.88rem)',
+              lineHeight: 1.45,
+              letterSpacing: '0.06em',
+              textTransform: 'uppercase',
+              color: 'rgba(255,255,255,0.55)',
+              opacity: 0,
+            }}
+          >
+            Our industry-leading web toolset consistently delivers award-winning
+            work through quality and performance.
+          </div>
         </div>
 
-        {/* Thin divider */}
-        <div
-          ref={(el) => {
-            itemsRef.current[1] = el;
-          }}
-          style={{
-            width: '28px',
-            height: '1px',
-            background: 'rgba(255,255,255,0.25)',
-            marginBottom: '1.5rem',
-            opacity: 0,
-          }}
-        />
-
-        {/* Primary paragraph */}
-        <div
-          ref={(el) => {
-            itemsRef.current[2] = el;
-          }}
-          style={{
-            fontFamily: "'DM Sans', sans-serif",
-            fontWeight: 400,
-            fontSize: 'clamp(0.72rem, 0.9vw, 0.88rem)',
-            lineHeight: 1.45,
-            letterSpacing: '0.06em',
-            textTransform: 'uppercase',
-            color: '#ffffff',
-            marginBottom: '1.6rem',
-            opacity: 0,
-          }}
-        >
-          We blend story, art &amp; technology as an in-house team of passionate
-          makers.
-        </div>
-
-        {/* Secondary paragraph */}
-        <div
-          ref={(el) => {
-            itemsRef.current[3] = el;
-          }}
-          style={{
-            fontFamily: "'DM Sans', sans-serif",
-            fontWeight: 400,
-            fontSize: 'clamp(0.72rem, 0.9vw, 0.88rem)',
-            lineHeight: 1.45,
-            letterSpacing: '0.06em',
-            textTransform: 'uppercase',
-            color: 'rgba(255,255,255,0.55)',
-            opacity: 0,
-          }}
-        >
-          Our industry-leading web toolset consistently delivers award-winning
-          work through quality and performance.
-        </div>
       </div>
-
-      {/* Ambient floor glow at section bottom */}
-      <div
-        style={{
-          position: 'absolute',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          height: '380px',
-          background:
-            'linear-gradient(to top, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0.14) 25%, rgba(255,255,255,0.05) 55%, transparent 100%)',
-          pointerEvents: 'none',
-          zIndex: 0,
-        }}
-      />
     </section>
   );
 }

@@ -1,5 +1,40 @@
 # HOUSE OF AN -- To Do
 
+## Recently Completed (2026-04-17 -- Unified Aurora + Scroll-Gap Compression)
+- [x] **ContinuousAuroraCanvas.tsx** (new): one shared `position:fixed` Canvas2D spans Campaign + Lookbook. 4 desktop ribbons (was 3), alpha 0.28-0.36, amp 0.11-0.15 -- ~70% brighter than old Lookbook-only aurora.
+- [x] **Deleted** CampaignMonolithBg.tsx + LookbookAuroraCanvas.tsx. Campaign's inline radial-gradient glow div also removed.
+- [x] **Campaign↔Lookbook seam**: phase driver stitches `lAct ? 1+lSp : cAct ? cSp : 0` so ribbons keep evolving across the boundary; `lookbookEnter = cAct ? 1 : smoothstep(0,0.08,lSp)` avoids a second fade-in when campaign already feeds the canvas. Floor div rises to `#000` on lookbook exit for TestimonialsFooter handoff.
+- [x] **Campaign-over-Why overlap fixed**: Campaign wrapper margin `-60vh → 0` (no negative top). Campaign no longer bleeds into Why's pin-release zone.
+- [x] **Campaign card1 early-exit fixed**: timeline reworked 3 → 3.2 units. Added HOLD t=0.4→1.2 before card1 exit; card1 now exits at ~37% section scroll (was ~20%).
+- [x] **Scroll-gap compression**: Why wrapper + Lookbook wrapper margins `-60vh → -120vh`. Each transition ~60vh shorter (uses full pin-release zone of preceding section as overlap budget).
+- [x] **Lookbook carousel no longer scrubs during Campaign**: split into two ScrollTriggers -- stateST at `top top` for aurora/envelope, animST at `top+=120vh top` for carousel scrub so images stay still until the overlap clears.
+- [x] **Smoother Campaign→Lookbook fades**: Campaign exit envelope widened to `smoothstep(0,0.08)*(1-smoothstep(0.85,1))` (~75vh dissolve). Lookbook enter delayed to `smoothstep(0.20,0.34)` so both fades overlap through the 120vh window.
+- [x] Docs synced: CLAUDE.md, PROGRESS.md, ROADMAP.md, TODO.md.
+
+## Immediate (2026-04-17)
+- [ ] **Visual QA -- unified aurora + compressed gaps**: `npm run dev`, slow scroll through Campaign → Lookbook. Confirm: aurora feels continuous (no seam / phase reset / brightness dip), Campaign card1 holds visible for a beat after intro before exiting, Lookbook images DO NOT move until after the 120vh overlap clears, no double-pin flicker at Why↔Campaign or Campaign↔Lookbook boundaries, TestimonialsFooter handoff stays clean as aurora floor rises to black.
+- [ ] If any double-pin flicker at `-120vh`, step back to `-100vh` (stays fully inside preceding section's pin-release zone).
+- [ ] `npm run typecheck && npm run lint` -- confirm no new errors beyond the pre-existing Canvas2D null-safety pattern (ctx/canvas possibly null -- matches sibling files).
+
+## Recently Completed (2026-04-14 -- AT UI Chrome)
+- [x] **AT CSS tokens added**: --at-glass-bg, --at-glass-border, --at-glass-blur, --at-radius-pill, --at-text-accent, --at-text-glow, --at-ease-out, --at-particle-dim added to global-effects.css :root
+- [x] **Navigation redesigned as split glass pills**: Left pill (Shop/Collections), center wordmark "House of An", right pill (About/Bag). Backdrop-blur glass treatment. No full-bar background. nav-desktop-pills hidden on mobile, hamburger unchanged.
+- [x] **SideRail.tsx created**: Fixed left mid-viewport, 4 periwinkle uppercase links (Bestsellers, Collections, Lookbook, About). Home route only. Hover slides right 7px. Lenis smooth scroll to section. Hidden on mobile via CSS.
+- [x] **Anchor IDs added to _index.tsx**: section-about, section-bestsellers, section-categories, section-lookbook on respective wrapper divs.
+- [x] **AmbientTicker.tsx created**: Bottom-left, mix-blend-mode: color-dodge. 5 brand lines cycle every 4.5s with fade. Text glows from WebGL scene underneath.
+- [x] **CornerTicker.tsx created**: Bottom-right marquee, 22s linear, mix-blend-mode: color-dodge. "RECYCLED SILVER -- MADE IN MUMBAI -- READY TO SHIP -- EST. 2024".
+- [x] **RouteTransition.tsx created**: Black overlay fades in on route load, fades out on idle. No white flash. SceneCanvas stays mounted. z-index 200.
+- [x] **ParticleField.tsx created**: 12k desktop / 2.5k mobile THREE.Points. Blue-silver (#8ab0e8), additive blending, sizeAttenuation. Fades out by 22% scroll. Outside <Select> (not bloomed). Mounted in SceneCanvas.
+- [x] **root.tsx wired**: RouteTransition, SideRail, AmbientTicker, CornerTicker all imported and rendered in Layout body.
+
+## Recently Completed (2026-04-11)
+- [x] **Active Theory visual re-theme**: Full color system overhaul across 8 files. Warm silver/titanium palette replaced with pure black base + blue/periwinkle AT aesthetic. Files changed: global-effects.css, BackgroundJourney.tsx, SceneCanvas.tsx, CategoriesSection.tsx, LookbookSection.tsx, WhySection.tsx, BestSellersSection.tsx, TestimonialsFooterSection.tsx.
+- [x] New CSS tokens added to :root: --at-accent #6080e0, --at-accent-bright #9ca5ff, --at-blue-steel #1a2840, --at-blue-silver #8ab0d0
+
+## Immediate (2026-04-14)
+- [ ] **Visual QA -- AT UI chrome**: Run `npm run dev`. Verify: glass pills visible at top, left SideRail periwinkle links, bottom-left AmbientTicker glowing, bottom-right CornerTicker marquee, black fade on route change, particle drift in hero.
+- [ ] **Place test images from house-of-an-1**: Images labeled 'lookbook' -> LookbookSection (6 slots), images labeled 'campaign' -> CampaignSection (3 card slots), remaining -> BestSellers/Categories. No repeats. (INTERRUPTED -- not yet done)
+
 ## Recently Completed (2026-04-04 Part 2)
 - [x] About section font: Bebas Neue 400, letterSpacing 0.04em (replaces DM Sans 800). Bebas Neue + Nunito added to Google Fonts URL in root.tsx
 - [x] About section text color: #ffffff with white bloom glow textShadow (20px/40px/80px rgba(255,255,255,0.8/0.5/0.2)) -- was bluish glow on rgba(255,255,255,0.55)
@@ -50,8 +85,8 @@
 - [ ] Domain confirmation (houseofan.com or houseofan.in)
 
 ## Tech Debt / Deferred
-- [ ] prefers-reduced-motion support
-- [ ] Page transitions between routes (Remix view transitions or GSAP flip)
+- [ ] prefers-reduced-motion support (ParticleField, AmbientTicker, CornerTicker should respect this)
+- [x] Page transitions between routes -- DONE (RouteTransition.tsx, black overlay, no white flash)
 - [ ] Chromatic aberration post-processing
 - [ ] entrance2.glb unused -- consider removing from public/models/
 - [ ] Fine-tune bg color journey once real sections replace all placeholders

@@ -10,6 +10,8 @@ export const aboutSectionState = {
 export const bestsellersSectionState = {
   active: false,
   sectionProgress: 0,
+  entranceProgress: 0,
+  carouselProgress: 0,
 };
 
 export const scenePhaseState = {
@@ -43,4 +45,11 @@ export const lookbookSectionState = {
 export const testimonialsSectionState = {
   active: false,
   sectionProgress: 0,
+};
+
+export const collectionsSectionState = {
+  active: false,
+  sectionProgress: 0,    // 0→1 across full 400vh
+  entranceProgress: 0,   // 0→1 across first 15% of section
+  shatterProgress: 0,    // 0→1 across last 15% of section
 };

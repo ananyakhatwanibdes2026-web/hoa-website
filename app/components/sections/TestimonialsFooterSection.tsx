@@ -189,7 +189,7 @@ export default function TestimonialsFooterSection() {
       <style>{`
         /* ─── Section reset ─────────────────────────────────────── */
         .tf-section {
-          background: linear-gradient(to bottom, #b8bac6 0%, #68789a 38%, #263d6a 100%);
+          background: #000000;
         }
 
         /* ─── Top content area ──────────────────────────────────── */
@@ -214,7 +214,7 @@ export default function TestimonialsFooterSection() {
           font-weight: 600;
           line-height: 0.92;
           letter-spacing: 0.01em;
-          color: rgba(22, 28, 52, 0.92);
+          color: rgba(255, 255, 255, 0.92);
           margin: 0;
           flex: 0 0 auto;
         }
@@ -223,7 +223,7 @@ export default function TestimonialsFooterSection() {
         .tf-heading-italic {
           font-style: italic;
           font-weight: 300;
-          color: rgba(38, 62, 112, 0.88);
+          color: rgba(96, 128, 224, 0.90);
         }
 
         .tf-subtext {
@@ -231,7 +231,7 @@ export default function TestimonialsFooterSection() {
           font-size: clamp(13px, 1.2vw, 16px);
           font-weight: 300;
           line-height: 1.75;
-          color: rgba(35, 48, 82, 0.60);
+          color: rgba(255, 255, 255, 0.38);
           max-width: 320px;
           margin: 0;
           padding-top: 0.6em;

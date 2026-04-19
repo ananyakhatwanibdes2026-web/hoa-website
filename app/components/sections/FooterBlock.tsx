@@ -104,7 +104,7 @@ export default function FooterBlock() {
         .tf-footer {
           position: relative;
           z-index: 2;
-          background: #0b0d1a;
+          background: #000000;
           overflow: hidden;
         }
 

@@ -5,6 +5,11 @@ import {lookbookSectionState} from '~/lib/sceneState';
 
 gsap.registerPlugin(ScrollTrigger);
 
+function smoothstep(edge0: number, edge1: number, x: number) {
+  const t = Math.min(1, Math.max(0, (x - edge0) / (edge1 - edge0)));
+  return t * t * (3 - 2 * t);
+}
+
 const PLACEHOLDER_COLORS = [
   '#2a1f1a',
   '#1f2a2a',
@@ -15,6 +20,15 @@ const PLACEHOLDER_COLORS = [
 ];
 
 const IMAGE_COUNT = 6;
+
+const LOOKBOOK_IMAGES = [
+  '/images/lookbook/lookbook1.png',
+  '/images/lookbook/lookbook2.png',
+  '/images/lookbook/lookbook3.png',
+  '/images/lookbook/lookbook4.png',
+  '/images/lookbook/lookbook5.png',
+  '/images/lookbook/lookbook6.png',
+];
 
 function offsetScale(offset: number): number {
   const abs = Math.abs(offset);
@@ -55,7 +69,7 @@ export default function LookbookSection() {
     // FOCAL_SHIFT moves the focal image to the right of center (60% from left),
     // leaving the left portion for past images to travel through.
     const galleryW = gallery.offsetWidth;
-    const STRIDE = galleryW * 0.22;
+    const STRIDE = galleryW * 0.32;
     const FOCAL_SHIFT = galleryW * 0.10;
 
     // Center all images at gallery center, then apply focal shift + offset
@@ -88,21 +102,21 @@ export default function LookbookSection() {
       }
     }
 
-    // Background: lighter blue → deep dark blue across all 6 images
-    tl.fromTo(
-      visual,
-      {backgroundColor: '#b8bcc4'},
-      {backgroundColor: '#04091a', ease: 'none', duration: 5},
-      0,
-    );
-
     const stateST = ScrollTrigger.create({
       trigger: section,
-      start: 'top 80%',
-      end: 'bottom 20%',
+      start: 'top top',
+      end: 'bottom bottom',
+      invalidateOnRefresh: true,
       onUpdate: (self) => {
         lookbookSectionState.active = self.isActive;
         lookbookSectionState.sectionProgress = self.progress;
+        const sp = self.progress;
+        // Fade in only AFTER Campaign fully clears (overlap = 120vh = sp 0.24),
+        // so Lookbook never visibly competes with Campaign. Hold until 0.92.
+        const envelope = smoothstep(0.15, 0.22, sp) * (1 - smoothstep(0.92, 1, sp));
+        if (visualRef.current) {
+          visualRef.current.style.opacity = envelope.toFixed(3);
+        }
       },
       onLeave: () => {
         lookbookSectionState.active = false;
@@ -112,11 +126,15 @@ export default function LookbookSection() {
       },
     });
 
+    // Carousel waits until Campaign overlap (120vh) clears + a 360vh static
+    // pre-roll so image 1 sits idle in focal long enough that a quick scroll
+    // still lands the user on it, not mid-transition. Section is 800vh;
+    // animation range: 800vh - 480vh = 320vh / 5 transitions = 64vh per swap.
     const animST = ScrollTrigger.create({
       trigger: section,
-      start: 'top top',
+      start: 'top+=480vh top',
       end: 'bottom bottom',
-      scrub: 1,
+      scrub: 0.08,
       animation: tl,
     });
 
@@ -140,7 +158,7 @@ export default function LookbookSection() {
 
         .lookbook-section {
           position: relative;
-          height: 700vh;
+          height: 800vh;
         }
 
         /* Sticky viewport -- gallery fills it entirely, text floats above */
@@ -149,7 +167,7 @@ export default function LookbookSection() {
           top: 0;
           height: 100vh;
           overflow: hidden;
-          background-color: #b8bcc4;
+          background-color: transparent;
         }
 
         /* Text floats top-left as an overlay */
@@ -193,6 +211,7 @@ export default function LookbookSection() {
         .lookbook-gallery {
           position: absolute;
           inset: 0;
+          z-index: 2;
         }
 
         /* Each image: absolutely centered, GSAP drives x/scale/opacity */
@@ -200,8 +219,8 @@ export default function LookbookSection() {
           position: absolute;
           top: 50%;
           left: 50%;
-          width: clamp(200px, 22vw, 340px);
-          height: clamp(280px, 60vh, 520px);
+          width: clamp(260px, 30vw, 460px);
+          height: clamp(360px, 72vh, 660px);
           border-radius: 8px;
           background-size: cover;
           background-position: center;
@@ -214,11 +233,11 @@ export default function LookbookSection() {
           position: absolute;
           top: 50%;
           left: calc(50% + 10vw);
-          width: clamp(200px, 22vw, 340px);
-          height: clamp(280px, 60vh, 520px);
+          width: clamp(260px, 30vw, 460px);
+          height: clamp(360px, 72vh, 660px);
           transform: translate(-50%, -50%);
           border-radius: 8px;
-          border: 4px solid rgba(255, 245, 230, 0.18);
+          border: 4px solid rgba(140, 168, 255, 0.18);
           pointer-events: none;
           z-index: 4;
           animation: lookbook-frame-breathe 4s ease-in-out infinite;
@@ -235,11 +254,11 @@ export default function LookbookSection() {
           background: conic-gradient(
             from var(--lookbook-angle) at 50% 50%,
             transparent 0%,
-            rgba(255, 228, 165, 0.0) 10%,
-            rgba(255, 228, 165, 0.85) 20%,
-            rgba(255, 248, 210, 1.0) 25%,
-            rgba(255, 228, 165, 0.85) 30%,
-            rgba(255, 228, 165, 0.0) 40%,
+            rgba(96, 128, 224, 0.0) 10%,
+            rgba(96, 128, 224, 0.82) 20%,
+            rgba(156, 165, 255, 1.0) 25%,
+            rgba(96, 128, 224, 0.82) 30%,
+            rgba(96, 128, 224, 0.0) 40%,
             transparent 100%
           );
           -webkit-mask:
@@ -257,15 +276,15 @@ export default function LookbookSection() {
         @keyframes lookbook-frame-breathe {
           0%, 100% {
             box-shadow:
-              0 0 20px 2px rgba(180, 130, 55, 0.06),
-              0 0 50px 10px rgba(180, 130, 55, 0.03);
-            border-color: rgba(255, 245, 230, 0.15);
+              0 0 20px 2px rgba(80, 120, 220, 0.08),
+              0 0 50px 10px rgba(80, 120, 220, 0.04);
+            border-color: rgba(140, 168, 255, 0.15);
           }
           50% {
             box-shadow:
-              0 0 28px 5px rgba(200, 150, 65, 0.16),
-              0 0 65px 16px rgba(200, 150, 65, 0.08);
-            border-color: rgba(255, 245, 230, 0.40);
+              0 0 28px 5px rgba(96, 144, 255, 0.20),
+              0 0 65px 16px rgba(96, 144, 255, 0.10);
+            border-color: rgba(156, 165, 255, 0.42);
           }
         }
 
@@ -287,12 +306,12 @@ export default function LookbookSection() {
 
         @media (max-width: 768px) {
           .lookbook-img {
-            width: clamp(180px, 55vw, 280px);
-            height: clamp(240px, 50vh, 400px);
+            width: clamp(220px, 68vw, 360px);
+            height: clamp(300px, 58vh, 500px);
           }
           .lookbook-frame {
-            width: clamp(180px, 55vw, 280px);
-            height: clamp(240px, 50vh, 400px);
+            width: clamp(220px, 68vw, 360px);
+            height: clamp(300px, 58vh, 500px);
           }
         }
       `}</style>
@@ -326,7 +345,7 @@ export default function LookbookSection() {
                 }}
                 className="lookbook-img"
                 style={{
-                  backgroundImage: "url('/ctest.jpg')",
+                  backgroundImage: `url('${LOOKBOOK_IMAGES[i]}')`,
                   backgroundSize: 'cover',
                   backgroundPosition: 'center',
                 }}

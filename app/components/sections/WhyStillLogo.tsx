@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import {whySectionState} from '~/lib/sceneState';
 
 if (typeof window !== 'undefined') {
-  useGLTF.preload('/models/AN_Logo.glb', '/draco/');
+  useGLTF.preload('/models/Logo_element.glb', '/draco/');
 }
 
 /**
@@ -13,7 +13,7 @@ if (typeof window !== 'undefined') {
  * logo: no scroll-driven rotation, local lighting, own Canvas instance.
  */
 function StillLogoMesh() {
-  const {scene} = useGLTF('/models/AN_Logo.glb', '/draco/');
+  const {scene} = useGLTF('/models/Logo_element.glb', '/draco/');
   const groupRef = useRef<THREE.Group>(null!);
 
   useEffect(() => {

@@ -1,6 +1,8 @@
 import {useEffect, useRef} from 'react';
 import gsap from 'gsap';
 import {ScrollTrigger} from 'gsap/ScrollTrigger';
+import {categoriesSectionState} from '~/lib/sceneState';
+import CategoriesWeaveCanvas from './CategoriesWeaveCanvas';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -36,248 +38,13 @@ const PANELS = [
 ];
 
 // ---------------------------------------------------------------------------
-// Canvas background -- metallic geometric network
-// ---------------------------------------------------------------------------
-
-interface NetNode {
-  nx: number; // normalized 0-1
-  ny: number;
-  vx: number; // px/frame (will be /w per frame)
-  vy: number;
-  r: number;
-  sparkle: boolean;
-  sparklePhase: number;
-  sparklePeriod: number;
-}
-
-function startCanvasNetwork(canvas: HTMLCanvasElement): () => void {
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return () => {};
-
-  const DPR = Math.min(typeof window !== 'undefined' ? window.devicePixelRatio : 1, 1.5);
-  const NODE_COUNT = 28;
-  const SPARKLE_RATIO = 0.28;
-
-  let raf = 0;
-  let nodes: NetNode[] = [];
-
-  function buildNodes() {
-    nodes = Array.from({length: NODE_COUNT}, () => ({
-      nx: Math.random(),
-      ny: Math.random(),
-      vx: (Math.random() - 0.5) * 0.22,
-      vy: (Math.random() - 0.5) * 0.22,
-      r: 1.8 + Math.random() * 1.4,
-      sparkle: Math.random() < SPARKLE_RATIO,
-      sparklePhase: Math.random() * Math.PI * 2,
-      sparklePeriod: 2600 + Math.random() * 2200,
-    }));
-  }
-
-  function resize() {
-    const w = canvas.offsetWidth;
-    const h = canvas.offsetHeight;
-    canvas.width = w * DPR;
-    canvas.height = h * DPR;
-    ctx.scale(DPR, DPR);
-  }
-
-  resize();
-  buildNodes();
-
-  const resizeHandler = () => {
-    resize();
-  };
-  window.addEventListener('resize', resizeHandler);
-
-  function drawStar(
-    x: number,
-    y: number,
-    size: number,
-    opacity: number,
-    w: number,
-    h: number,
-  ) {
-    ctx.save();
-    // Main cross (horizontal + vertical)
-    for (let arm = 0; arm < 2; arm++) {
-      const angle = arm * (Math.PI / 2);
-      const len = size * 4.2;
-      const x0 = x - Math.cos(angle) * len;
-      const y0 = y - Math.sin(angle) * len;
-      const x1 = x + Math.cos(angle) * len;
-      const y1 = y + Math.sin(angle) * len;
-      const grad = ctx.createLinearGradient(x0, y0, x1, y1);
-      grad.addColorStop(0, 'rgba(255,255,255,0)');
-      grad.addColorStop(0.45, `rgba(255,255,255,${opacity * 0.82})`);
-      grad.addColorStop(0.5, `rgba(255,255,255,${opacity})`);
-      grad.addColorStop(0.55, `rgba(255,255,255,${opacity * 0.82})`);
-      grad.addColorStop(1, 'rgba(255,255,255,0)');
-      ctx.strokeStyle = grad;
-      ctx.lineWidth = 0.9;
-      ctx.beginPath();
-      ctx.moveTo(x0, y0);
-      ctx.lineTo(x1, y1);
-      ctx.stroke();
-    }
-    // Diagonal arms (thinner, shorter)
-    for (let arm = 0; arm < 2; arm++) {
-      const angle = arm * (Math.PI / 2) + Math.PI / 4;
-      const len = size * 2.2;
-      const x0 = x - Math.cos(angle) * len;
-      const y0 = y - Math.sin(angle) * len;
-      const x1 = x + Math.cos(angle) * len;
-      const y1 = y + Math.sin(angle) * len;
-      ctx.strokeStyle = `rgba(255,255,255,${opacity * 0.45})`;
-      ctx.lineWidth = 0.5;
-      ctx.beginPath();
-      ctx.moveTo(x0, y0);
-      ctx.lineTo(x1, y1);
-      ctx.stroke();
-    }
-    // Center glow dot
-    const glowGrad = ctx.createRadialGradient(x, y, 0, x, y, size * 2.5);
-    glowGrad.addColorStop(0, `rgba(255,255,255,${opacity * 0.9})`);
-    glowGrad.addColorStop(0.4, `rgba(210,215,235,${opacity * 0.35})`);
-    glowGrad.addColorStop(1, 'rgba(210,215,235,0)');
-    ctx.fillStyle = glowGrad;
-    ctx.beginPath();
-    ctx.arc(x, y, size * 2.5, 0, Math.PI * 2);
-    ctx.fill();
-    // Crisp center dot
-    ctx.beginPath();
-    ctx.arc(x, y, size * 0.75, 0, Math.PI * 2);
-    ctx.fillStyle = `rgba(255,255,255,${opacity})`;
-    ctx.fill();
-    ctx.restore();
-    // suppress unused param warning
-    void w; void h;
-  }
-
-  function draw(timestamp: number) {
-    const w = canvas.offsetWidth;
-    const h = canvas.offsetHeight;
-
-    ctx.clearRect(0, 0, w, h);
-
-    // -- Background: dark charcoal radial gradient, metallic mid-tone --
-    const bg = ctx.createRadialGradient(w * 0.5, h * 0.38, 0, w * 0.5, h * 0.5, Math.max(w, h) * 0.82);
-    bg.addColorStop(0, '#252532');
-    bg.addColorStop(0.38, '#1a1a26');
-    bg.addColorStop(0.72, '#131320');
-    bg.addColorStop(1, '#0c0c16');
-    ctx.fillStyle = bg;
-    ctx.fillRect(0, 0, w, h);
-
-    // -- Update node positions --
-    const DIST = Math.max(w, h) * 0.21;
-
-    for (const n of nodes) {
-      n.nx += n.vx / w;
-      n.ny += n.vy / h;
-      if (n.nx < 0 || n.nx > 1) { n.vx *= -1; n.nx = Math.max(0, Math.min(1, n.nx)); }
-      if (n.ny < 0 || n.ny > 1) { n.vy *= -1; n.ny = Math.max(0, Math.min(1, n.ny)); }
-    }
-
-    // -- Draw connections --
-    for (let i = 0; i < nodes.length; i++) {
-      const ax = nodes[i].nx * w;
-      const ay = nodes[i].ny * h;
-      for (let j = i + 1; j < nodes.length; j++) {
-        const bx = nodes[j].nx * w;
-        const by = nodes[j].ny * h;
-        const dx = ax - bx;
-        const dy = ay - by;
-        const d = Math.sqrt(dx * dx + dy * dy);
-        if (d >= DIST) continue;
-
-        const t = 1 - d / DIST;
-        const opacity = t * 0.26;
-
-        ctx.strokeStyle = `rgba(185,190,218,${opacity})`;
-        ctx.lineWidth = 0.65;
-        ctx.beginPath();
-        ctx.moveTo(ax, ay);
-        ctx.lineTo(bx, by);
-        ctx.stroke();
-
-        // Triangle fill for close pairs
-        if (d < DIST * 0.52) {
-          for (let k = j + 1; k < nodes.length; k++) {
-            const cx = nodes[k].nx * w;
-            const cy = nodes[k].ny * h;
-            const dac = Math.sqrt((ax - cx) ** 2 + (ay - cy) ** 2);
-            const dbc = Math.sqrt((bx - cx) ** 2 + (by - cy) ** 2);
-            if (dac < DIST * 0.52 && dbc < DIST * 0.52) {
-              ctx.beginPath();
-              ctx.moveTo(ax, ay);
-              ctx.lineTo(bx, by);
-              ctx.lineTo(cx, cy);
-              ctx.closePath();
-              ctx.fillStyle = 'rgba(160,165,200,0.038)';
-              ctx.fill();
-            }
-          }
-        }
-      }
-    }
-
-    // -- Draw nodes --
-    for (const n of nodes) {
-      const x = n.nx * w;
-      const y = n.ny * h;
-
-      if (n.sparkle) {
-        const pulse =
-          0.45 + 0.55 * (0.5 + 0.5 * Math.sin((timestamp / n.sparklePeriod) * Math.PI * 2 + n.sparklePhase));
-        drawStar(x, y, n.r * 1.3 * pulse, 0.5 + 0.5 * pulse, w, h);
-      } else {
-        ctx.beginPath();
-        ctx.arc(x, y, n.r, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(185,190,218,0.48)';
-        ctx.fill();
-      }
-    }
-
-    // -- Edge vignette: fade to near-black at top/bottom to blend with page --
-    const vTop = ctx.createLinearGradient(0, 0, 0, h * 0.22);
-    vTop.addColorStop(0, 'rgba(10,10,20,0.85)');
-    vTop.addColorStop(1, 'rgba(10,10,20,0)');
-    ctx.fillStyle = vTop;
-    ctx.fillRect(0, 0, w, h * 0.22);
-
-    const vBot = ctx.createLinearGradient(0, h * 0.78, 0, h);
-    vBot.addColorStop(0, 'rgba(10,10,20,0)');
-    vBot.addColorStop(1, 'rgba(10,10,20,0.85)');
-    ctx.fillStyle = vBot;
-    ctx.fillRect(0, h * 0.78, w, h * 0.22);
-
-    raf = requestAnimationFrame(draw);
-  }
-
-  raf = requestAnimationFrame(draw);
-
-  return () => {
-    cancelAnimationFrame(raf);
-    window.removeEventListener('resize', resizeHandler);
-  };
-}
-
-// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
 export default function CategoriesSection() {
   const sectionRef = useRef<HTMLElement>(null);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  // Canvas background animation
-  useEffect(() => {
-    if (!canvasRef.current) return;
-    const stop = startCanvasNetwork(canvasRef.current);
-    return stop;
-  }, []);
+  const headingRef = useRef<HTMLDivElement>(null);
 
   // GSAP scroll animations
   useEffect(() => {
@@ -285,36 +52,66 @@ export default function CategoriesSection() {
       gsap.set(cardRefs.current[0], {x: -100, y: 70, opacity: 0});
       gsap.set(cardRefs.current[1], {x: 0, y: 90, opacity: 0});
       gsap.set(cardRefs.current[2], {x: 100, y: 70, opacity: 0});
+      gsap.set(headingRef.current,  {opacity: 0, y: 22});
 
       const tl = gsap.timeline({paused: true});
 
-      // Phase 1 (0 -> 0.55): Cards enter from sides/below with stagger
-      tl.to(cardRefs.current[0], {x: 0, y: 0, opacity: 1, ease: 'power3.out', duration: 0.55}, 0)
-        .to(cardRefs.current[1], {x: 0, y: 0, opacity: 1, ease: 'power3.out', duration: 0.55}, 0.12)
-        .to(cardRefs.current[2], {x: 0, y: 0, opacity: 1, ease: 'power3.out', duration: 0.55}, 0.24);
+      // Phase 1 (0 -> 1.0): Cards enter from sides/below -- one full viewport height of scroll
+      tl.to(cardRefs.current[0], {x: 0, y: 0, opacity: 1, ease: 'power3.out', duration: 1.0},  0)
+        .to(cardRefs.current[1], {x: 0, y: 0, opacity: 1, ease: 'power3.out', duration: 0.90}, 0.12)
+        .to(cardRefs.current[2], {x: 0, y: 0, opacity: 1, ease: 'power3.out', duration: 0.80}, 0.24);
 
-      // Phase 2 (0.55 -> 2.0): Subtle parallax -- different rates create depth layering
-      tl.to(cardRefs.current[0], {y: -28, ease: 'none', duration: 1.45}, 0.55)
-        .to(cardRefs.current[1], {y: -14, ease: 'none', duration: 1.45}, 0.55)
-        .to(cardRefs.current[2], {y: -28, ease: 'none', duration: 1.45}, 0.55);
+      // Phase 1b (0.10 -> 0.55): Heading fades in as cards enter
+      tl.to(headingRef.current, {opacity: 1, y: 0, ease: 'power2.out', duration: 0.45}, 0.10);
+
+      // Phase 2 (1.0 -> 1.4): Brief dwell with gentle parallax
+      tl.to(cardRefs.current[0], {y: -12, ease: 'none', duration: 0.40}, 1.0)
+        .to(cardRefs.current[1], {y: -6,  ease: 'none', duration: 0.40}, 1.0)
+        .to(cardRefs.current[2], {y: -12, ease: 'none', duration: 0.40}, 1.0);
+
+      // Phase 3a (1.4 -> 2.0): Edge (left) launches off to the left
+      tl.to(cardRefs.current[0], {x: -300, y: -40, opacity: 0, ease: 'power2.in', duration: 0.6}, 1.4);
+
+      // Phase 3b (2.0 -> 2.6): Sculpt (center) launches straight up; heading exits with it
+      tl.to(cardRefs.current[1], {y: -220, opacity: 0, ease: 'power2.in', duration: 0.6}, 2.0)
+        .to(headingRef.current,  {opacity: 0, y: -25, ease: 'power2.in', duration: 0.45}, 2.1);
+
+      // Phase 3c (2.6 -> 3.2): Elite (right) launches off to the right
+      tl.to(cardRefs.current[2], {x: 300, y: -40, opacity: 0, ease: 'power2.in', duration: 0.6}, 2.6);
 
       ScrollTrigger.create({
         trigger: sectionRef.current,
         start: 'top top',
         end: 'bottom bottom',
-        scrub: 1.2,
+        scrub: 0.3,
         animation: tl,
+      });
+
+      ScrollTrigger.create({
+        trigger: sectionRef.current,
+        start: 'top top',
+        end: 'bottom bottom',
+        invalidateOnRefresh: true,
+        onToggle: (self) => {
+          categoriesSectionState.active = self.isActive;
+        },
+        onUpdate: (self) => {
+          categoriesSectionState.sectionProgress = self.progress;
+        },
       });
     }, sectionRef.current!);
 
-    return () => ctx.revert();
+    return () => {
+      ctx.revert();
+      categoriesSectionState.active = false;
+    };
   }, []);
 
   return (
     <section
       ref={sectionRef}
       data-section="categories"
-      style={{height: '300vh', position: 'relative', zIndex: 1}}
+      style={{height: '500vh', position: 'relative', zIndex: 1}}
     >
       <style>{`
         .cat-hdg-wrap {
@@ -399,9 +196,9 @@ export default function CategoriesSection() {
         }
         .cat-card-outer:hover::after {
           box-shadow:
-            0 0 40px 10px rgba(235, 190, 90, 0.32),
-            0 0 90px 28px rgba(235, 190, 90, 0.16);
-          border-color: rgba(255, 245, 220, 0.60);
+            0 0 40px 10px rgba(100, 150, 255, 0.36),
+            0 0 90px 28px rgba(100, 150, 255, 0.18);
+          border-color: rgba(156, 165, 255, 0.65);
           transition: box-shadow 0.5s ease, border-color 0.5s ease;
         }
 
@@ -453,9 +250,9 @@ export default function CategoriesSection() {
           position: absolute;
           inset: 0;
           background: linear-gradient(to top,
-            rgba(0,0,0,0.58) 0%,
-            rgba(0,0,0,0.20) 38%,
-            rgba(0,0,0,0)    60%
+            rgba(0,0,0,0.72) 0%,
+            rgba(0,0,0,0.38) 42%,
+            rgba(0,0,0,0)    65%
           );
           pointer-events: none;
           z-index: 1;
@@ -463,19 +260,17 @@ export default function CategoriesSection() {
 
         .cat-label {
           position: absolute;
-          top: 22px;
-          left: 22px;
+          bottom: 32px;
+          left: 28px;
           z-index: 2;
-          background: #ffffff;
-          border-radius: 8px;
-          padding: 11px 28px;
-          box-shadow: 0 4px 18px rgba(0,0,0,0.18);
           font-family: var(--font-display, 'Cormorant Garamond', serif);
           font-style: italic;
-          font-weight: 700;
-          font-size: clamp(1.2rem, 2vw, 1.55rem);
-          color: #111111;
+          font-weight: 600;
+          font-size: clamp(1.5rem, 2.4vw, 2rem);
+          color: #ffffff;
           line-height: 1;
+          letter-spacing: 0.04em;
+          text-shadow: 0 2px 16px rgba(0,0,0,0.65), 0 1px 4px rgba(0,0,0,0.9);
           pointer-events: none;
           user-select: none;
         }
@@ -516,15 +311,15 @@ export default function CategoriesSection() {
         @keyframes cat-breathe {
           0%, 100% {
             box-shadow:
-              0 0 20px 3px rgba(210, 165, 75, 0.08),
-              0 0 55px 12px rgba(210, 165, 75, 0.03);
-            border-color: rgba(255, 245, 220, 0.14);
+              0 0 20px 3px rgba(80, 120, 220, 0.10),
+              0 0 55px 12px rgba(80, 120, 220, 0.04);
+            border-color: rgba(140, 168, 255, 0.14);
           }
           50% {
             box-shadow:
-              0 0 32px 8px rgba(235, 190, 90, 0.22),
-              0 0 75px 22px rgba(235, 190, 90, 0.10);
-            border-color: rgba(255, 245, 220, 0.42);
+              0 0 32px 8px rgba(96, 144, 255, 0.24),
+              0 0 75px 22px rgba(96, 144, 255, 0.12);
+            border-color: rgba(156, 165, 255, 0.44);
           }
         }
 
@@ -539,11 +334,11 @@ export default function CategoriesSection() {
           background: conic-gradient(
             from var(--cat-angle) at 50% 50%,
             transparent 0%,
-            rgba(255, 228, 165, 0.0) 8%,
-            rgba(255, 228, 165, 0.9) 18%,
-            rgba(255, 248, 210, 1.0) 22%,
-            rgba(255, 228, 165, 0.9) 28%,
-            rgba(255, 228, 165, 0.0) 38%,
+            rgba(96, 128, 224, 0.0) 8%,
+            rgba(96, 128, 224, 0.85) 18%,
+            rgba(156, 165, 255, 1.0) 22%,
+            rgba(96, 128, 224, 0.85) 28%,
+            rgba(96, 128, 224, 0.0) 38%,
             transparent 100%
           );
           -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
@@ -560,7 +355,7 @@ export default function CategoriesSection() {
           position: absolute;
           inset: -2px;
           border-radius: 20px;
-          border: 2px solid rgba(255, 245, 220, 0.14);
+          border: 2px solid rgba(140, 168, 255, 0.14);
           animation: cat-breathe 4.5s ease-in-out infinite;
           z-index: 4;
           pointer-events: none;
@@ -591,23 +386,13 @@ export default function CategoriesSection() {
           justifyContent: 'center',
           gap: '36px',
           overflow: 'hidden',
+          background: 'transparent',
         }}
       >
-        {/* Animated metallic geometric canvas background */}
-        <canvas
-          ref={canvasRef}
-          style={{
-            position: 'absolute',
-            inset: 0,
-            width: '100%',
-            height: '100%',
-            zIndex: 0,
-            display: 'block',
-          }}
-        />
+        <CategoriesWeaveCanvas />
 
         {/* Section heading */}
-        <div className="cat-hdg-wrap">
+        <div ref={headingRef} className="cat-hdg-wrap">
           <span className="cat-eyebrow">House of An</span>
           <h2 className="cat-hdg">
             {'COLLECTIONS'.split('').map((ch, i) => (

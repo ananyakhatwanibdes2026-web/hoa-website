@@ -3,6 +3,7 @@ import {gsap} from 'gsap';
 import {ScrollTrigger} from 'gsap/ScrollTrigger';
 import {whySectionState} from '~/lib/sceneState';
 import {AboutStillLogo} from './AboutStillLogo';
+import WhyMistCanvas from './WhyMistCanvas';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -12,7 +13,6 @@ export default function WhySection() {
   const rightRef = useRef<HTMLDivElement>(null);
   const wordsRef = useRef<(HTMLDivElement | null)[]>([]);
   const itemsRef = useRef<(HTMLElement | null)[]>([]);
-  const blackBgRef = useRef<HTMLDivElement>(null);
   const logoContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -20,78 +20,67 @@ export default function WhySection() {
     if (!section) return;
 
     const ctx = gsap.context(() => {
-      const tl = gsap.timeline({
-        scrollTrigger: {
-          trigger: section,
-          start: 'top 78%',
-          end: 'bottom 5%',
-          scrub: 1,
-        },
-      });
+      // Paused timeline driven by ScrollTrigger scrub (sticky scroll pattern)
+      const tl = gsap.timeline({paused: true});
 
-      // Logo fades in with the first word
+      // Logo fades in first
       if (logoContainerRef.current) {
         tl.fromTo(
           logoContainerRef.current,
           {opacity: 0},
-          {opacity: 1, duration: 0.2, ease: 'power2.out'},
+          {opacity: 1, duration: 0.18, ease: 'power2.out'},
           0.0,
         );
       }
 
-      // Sequential word reveal: THE -> REFINED -> REBELLION
-      const wordPositions = [0.0, 0.15, 0.30];
+      // Sequential word reveal: WHY -> HOUSE OF -> AN
+      // Spread across first 40% of scroll so each word has breathing room
+      const wordPositions = [0.04, 0.16, 0.28];
       wordsRef.current.forEach((el, i) => {
         if (!el) return;
         tl.fromTo(
           el,
-          {y: 40, opacity: 0},
-          {y: 0, opacity: 1, duration: 0.12, ease: 'power2.out'},
+          {y: 50, opacity: 0},
+          {y: 0, opacity: 1, duration: 0.14, ease: 'power2.out'},
           wordPositions[i],
         );
       });
 
-      // Right items: staggered fade + lift
+      // Subtle upward parallax on the words container
+      if (leftRef.current) {
+        tl.to(
+          leftRef.current,
+          {y: -28, ease: 'none', duration: 0.84},
+          0.04,
+        );
+      }
+
+      // Right column: stagger in after AN appears
       itemsRef.current.forEach((el, i) => {
         if (!el) return;
         tl.fromTo(
           el,
           {y: 20, opacity: 0},
-          {y: 0, opacity: 1, duration: 0.22, ease: 'power2.out'},
-          0.0 + i * 0.07,
+          {y: 0, opacity: 1, duration: 0.16, ease: 'power2.out'},
+          0.40 + i * 0.06,
         );
       });
 
-      // Exit: fade + slide up together
-      tl.to(
-        [...wordsRef.current.filter(Boolean), rightRef.current, logoContainerRef.current].filter(Boolean),
-        {opacity: 0, y: -32, duration: 0.12, ease: 'power2.in'},
-        0.88,
-      );
-
-      // Black bg fades in as section enters
-      if (blackBgRef.current) {
-        gsap.fromTo(
-          blackBgRef.current,
-          {opacity: 0},
-          {
-            opacity: 1,
-            ease: 'none',
-            scrollTrigger: {
-              trigger: section,
-              start: 'top 90%',
-              end: 'top 25%',
-              scrub: 1,
-            },
-          },
-        );
-      }
-
-      // Section-awareness: update shared state
+      // Wire timeline to scroll — outer section 250vh, sticky inner 100vh = 150vh scrub distance
       ScrollTrigger.create({
         trigger: section,
-        start: 'top 70%',
-        end: 'bottom 30%',
+        start: 'top top',
+        end: 'bottom bottom',
+        scrub: 1,
+        animation: tl,
+      });
+
+      // Section awareness for SceneCanvas logo fade
+      ScrollTrigger.create({
+        trigger: section,
+        start: 'top top',
+        end: 'bottom bottom',
+        invalidateOnRefresh: true,
         onToggle: (self) => {
           whySectionState.active = self.isActive;
         },
@@ -110,25 +99,22 @@ export default function WhySection() {
     <section
       ref={sectionRef}
       style={{
-        height: '100vh',
+        height: '250vh',
         position: 'relative',
-        overflow: 'hidden',
+        overflow: 'visible',
         pointerEvents: 'none',
       }}
     >
-      {/* Pure black background overlay */}
+      {/* Sticky inner viewport -- stays pinned while outer 250vh scrolls */}
       <div
-        ref={blackBgRef}
         style={{
-          position: 'absolute',
-          inset: 0,
-          zIndex: -1,
-          pointerEvents: 'none',
-          opacity: 0,
-          background: 'linear-gradient(to bottom, #1c1c22 0%, #2a2a32 25%, #3a3a44 50%, #868690 78%, #b0b0b8 100%)',
+          position: 'sticky',
+          top: 0,
+          height: '100vh',
+          overflow: 'visible',
         }}
-      />
-
+      >
+      <WhyMistCanvas />
       {/* LEFT: large background tagline */}
       <div
         ref={leftRef}
@@ -278,20 +264,7 @@ export default function WhySection() {
         </div>
       </div>
 
-      {/* Ambient floor glow at section bottom */}
-      <div
-        style={{
-          position: 'absolute',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          height: '380px',
-          background:
-            'linear-gradient(to top, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0.14) 25%, rgba(255,255,255,0.05) 55%, transparent 100%)',
-          pointerEvents: 'none',
-          zIndex: 0,
-        }}
-      />
+      </div>
     </section>
   );
 }
