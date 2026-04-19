@@ -46,8 +46,9 @@ Store setup, Hydrogen scaffolding, dependencies, 3D asset conversion.
 39. Place test images from house-of-an-1 into site sections -- IN PROGRESS (interrupted)
 40. ~~AT UI chrome (2026-04-14): split glass pill nav, SideRail left rail, AmbientTicker color-dodge, CornerTicker marquee, RouteTransition black overlay, ParticleField 12k points in hero. All wired into root.tsx.~~ DONE
 41. ~~Unified Campaign+Lookbook aurora + scroll-gap compression (2026-04-17): ContinuousAuroraCanvas (shared `position:fixed` Canvas2D, 4 ribbons, ~70% boosted alpha/amp, phase stitched across section seam, floor rises to `#000` for TestimonialsFooter handoff). CampaignMonolithBg + LookbookAuroraCanvas deleted. Campaign timeline reworked 3→3.2 units with pre-exit HOLD so card1 doesn't leave early. Why + Lookbook wrappers `-60vh → -120vh` (Campaign wrapper `0`) -- ~60vh shorter at each transition. Lookbook animST delayed to `top+=120vh top` so carousel stays still during Campaign overlap. Envelopes widened/shifted for smoother crossfade (Campaign exit 0.85→1, Lookbook enter 0.20→0.34).~~ DONE
-42. Post-processing polish (chromatic aberration -- Bloom currently disabled, can be re-enabled)
-43. Performance optimization + mobile pass
+42. ~~Scroll-synced SideRail nav (2026-04-19): 4 buttons → 7 anchor-link scrollspy (Home / About / Bestsellers / Categories / The Why / Campaign / Lookbook). `<button>` → `<a>`, `<nav aria-label>` wrapper. Active item styled with 0.98rem / weight 500 / pure white / widened letter-spacing / translateX(16px) / periwinkle glow / 22px hairline indicator. Base size bumped (0.82rem / 32px left / 1.6rem gap). Single `IntersectionObserver` at `-45%` rootMargin drives the active label; Bestsellers entry spans `section-bs-title` + `section-bestsellers`. `_index.tsx` got 4 new IDs (`section-hero`, `section-bs-title`, `section-why`, `section-campaign`).~~ DONE
+43. Post-processing polish (chromatic aberration -- Bloom currently disabled, can be re-enabled)
+44. Performance optimization + mobile pass
 
 ## Phase 3: Inner Pages
 - PDP (stacked card image gallery, slide-up transitions, custom 3D cursor on gallery)

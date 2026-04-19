@@ -1,5 +1,19 @@
 # HOUSE OF AN -- To Do
 
+## Recently Completed (2026-04-19 -- Scroll-Synced SideRail Nav)
+- [x] **SideRail.tsx** reworked from 4-button click list → 7-item scrollspy: Home, About, Bestsellers, Categories, The Why, Campaign, Lookbook.
+- [x] `<button>` elements replaced with `<a href="#section-...">` (no button chrome). Wrapper now a semantic `<nav aria-label="Section navigation">`.
+- [x] Active-item differentiation: font-size 0.98rem (inactive 0.82rem), weight 500, color #ffffff, letter-spacing widens 0.28em→0.32em, translateX(16px), periwinkle text-shadow glow, and a 22px hairline bar slides in to the left. All tween over 0.28s.
+- [x] Overall size bumped (base 0.82rem was 0.52rem, left offset 32px was 24px, gap 1.6rem).
+- [x] Active state driven by single `IntersectionObserver` with `rootMargin: '-45% 0px -45% 0px'` — only the section crossing viewport center is active. `setActiveLabel` guarded to avoid per-frame re-renders.
+- [x] Bestsellers nav entry covers both `section-bs-title` AND `section-bestsellers` so it stays active through the 180vh title card + 500vh carousel.
+- [x] Home click → `lenis.scrollTo(0)`; others → existing id-anchor Lenis scroll.
+- [x] `_index.tsx`: 4 missing IDs added — `section-hero` (HeroSection wrapper), `section-bs-title` (bsTitleSectionRef), `section-why` (whyWrapperRef), `section-campaign` (campaignWrapperRef). Existing IDs unchanged.
+- [x] TypeScript check clean for touched files.
+
+## Immediate (2026-04-19)
+- [ ] **Visual QA -- scrollspy nav**: `npm run dev`, full page scroll top→bottom at desktop width. Confirm active label swaps at ~viewport center for each of the 7 sections, including through the Campaign↔Lookbook 120vh overlap (should hand off once, no flicker). Confirm clicking Home scrolls to top, other items scroll to their section. Confirm mobile resize still hides the rail (existing `.at-side-rail` CSS).
+
 ## Recently Completed (2026-04-17 -- Unified Aurora + Scroll-Gap Compression)
 - [x] **ContinuousAuroraCanvas.tsx** (new): one shared `position:fixed` Canvas2D spans Campaign + Lookbook. 4 desktop ribbons (was 3), alpha 0.28-0.36, amp 0.11-0.15 -- ~70% brighter than old Lookbook-only aurora.
 - [x] **Deleted** CampaignMonolithBg.tsx + LookbookAuroraCanvas.tsx. Campaign's inline radial-gradient glow div also removed.

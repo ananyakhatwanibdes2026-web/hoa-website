@@ -3,7 +3,6 @@ import {gsap} from 'gsap';
 import {ScrollTrigger} from 'gsap/ScrollTrigger';
 import {whySectionState} from '~/lib/sceneState';
 import {AboutStillLogo} from './AboutStillLogo';
-import WhyMistCanvas from './WhyMistCanvas';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -114,7 +113,6 @@ export default function WhySection() {
           overflow: 'visible',
         }}
       >
-      <WhyMistCanvas />
       {/* LEFT: large background tagline */}
       <div
         ref={leftRef}

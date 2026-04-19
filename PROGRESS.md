@@ -1,5 +1,29 @@
 # HOUSE OF AN -- Progress Log
 
+## Session: 2026-04-19 (Scroll-Synced SideRail Nav)
+
+### SideRail converted to 7-item scrollspy [COMPLETE]
+User: "on the left side of the page there is 'bestseller collection lookbook about' written as clickable buttons. instead of the buttons i need them to be like a navigation key while scrolling which goes like Home (on the hero page) About (on about page) Bestsellers (on bestseller page) Categories (on categories) THE WHY (on why page) Campaign (on campaign page) Lookbook (on lookbook). ... if the user is on home page, the home should be highlighted, do same for all pages." Follow-up: "i dont want them as buttons. also make the title of the page we are on stand out on the navigation key. also make overall size bigger".
+
+- [x] `app/components/global/SideRail.tsx` rewritten. `<div>` wrapper → semantic `<nav aria-label="Section navigation">`. `<button>` → `<a href="#section-...">` with `e.preventDefault()` + Lenis scroll (no button chrome).
+- [x] LINKS array expanded from 4 → 7: `Home / About / Bestsellers / Categories / The Why / Campaign / Lookbook`. Each entry has `{label, targetIds[], scrollTo}` — Bestsellers covers BOTH `section-bs-title` and `section-bestsellers` so the label stays active across the 180vh title card + 500vh carousel.
+- [x] Single `IntersectionObserver` replaces any per-section state coupling. `rootMargin: '-45% 0px -45% 0px'`, `threshold: 0`. Callback updates `activeLabel` state only when the label actually changes (guard ref `current`), so scrolling does not trigger per-frame re-renders.
+- [x] Base size bumped: font 0.82rem (was 0.52rem), left 32px (was 24px), gap 1.6rem (was 1.5rem). Color var(--at-accent-bright), letter-spacing 0.28em, uppercase, DM Sans — all inactive.
+- [x] **Active styling stands out hard**: font-size 0.98rem, weight 500, color pure white `#ffffff`, letter-spacing widens to 0.32em, opacity 1, `transform: translateX(16px)`, periwinkle text-shadow `0 0 12px rgba(156,165,255,0.75), 0 0 28px rgba(156,165,255,0.35)`. A 22px glowing hairline bar (`background: rgba(255,255,255,0.85)`, `boxShadow: 0 0 8px rgba(156,165,255,0.7)`) slides in immediately before the active label; its width animates 0→22px and margin 0→10px. All transitions 0.28s ease.
+- [x] Hover preserved (opacity 1 + translateX(8px) for inactive items; does not dim the active item on leave).
+- [x] Home link `href="#top"`, `scrollTo === 'top'` branch calls `lenis.scrollTo(0, {duration: 1.4})` (fallback `window.scrollTo`).
+- [x] `app/routes/_index.tsx`: 4 new wrapper IDs added — `section-hero` (wraps HeroSection's ClientOnly/Suspense block), `section-bs-title` on the `<section ref={bsTitleSectionRef}>`, `section-why` on the whyWrapperRef `<div>`, `section-campaign` on the campaignWrapperRef `<div>`. Existing IDs (`section-about`, `section-bestsellers`, `section-categories`, `section-lookbook`) unchanged.
+- [x] TypeScript check (`npx tsc --noEmit`) clean for both touched files. Only pre-existing project-wide errors remain (Canvas2D null-safety in sibling files — not in scope).
+- [x] `useLocation()` home-route gate and `.at-side-rail` mobile-hide CSS both preserved — nav remains desktop-home-only.
+
+### Docs synced [COMPLETE]
+- [x] CLAUDE.md: SideRail entry rewritten to describe the scrollspy behavior + 7-item list; `_index.tsx` entry now documents all 8 anchor IDs with a "DO NOT rename without updating SideRail" note.
+- [x] TODO.md: new "Recently Completed (2026-04-19)" block + Immediate QA task.
+- [x] ROADMAP.md: new item 42.
+- [x] PROGRESS.md: this entry.
+
+---
+
 ## Session: 2026-04-17 (Unified Aurora + Scroll-Gap Compression)
 
 ### Continuous Aurora Background [COMPLETE]

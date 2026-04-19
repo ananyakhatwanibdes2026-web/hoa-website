@@ -2,7 +2,6 @@ import {useEffect, useRef} from 'react';
 import gsap from 'gsap';
 import {ScrollTrigger} from 'gsap/ScrollTrigger';
 import {categoriesSectionState} from '~/lib/sceneState';
-import CategoriesWeaveCanvas from './CategoriesWeaveCanvas';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -389,8 +388,6 @@ export default function CategoriesSection() {
           background: 'transparent',
         }}
       >
-        <CategoriesWeaveCanvas />
-
         {/* Section heading */}
         <div ref={headingRef} className="cat-hdg-wrap">
           <span className="cat-eyebrow">House of An</span>

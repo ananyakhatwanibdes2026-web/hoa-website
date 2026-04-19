@@ -31,8 +31,8 @@ const CampaignSection = lazy(
 const LookbookSection = lazy(
   () => import('~/components/sections/LookbookSection'),
 );
-const ContinuousAuroraCanvas = lazy(
-  () => import('~/components/sections/ContinuousAuroraCanvas'),
+const ContinuousBackdrop = lazy(
+  () => import('~/components/global/ContinuousBackdrop'),
 );
 const TestimonialsFooterSection = lazy(
   () => import('~/components/sections/TestimonialsFooterSection'),
@@ -100,6 +100,9 @@ export default function Homepage() {
   const campaignWrapperRef = useRef<HTMLDivElement>(null);
   const bsTitleSectionRef = useRef<HTMLElement>(null);
   const bsTitleRef = useRef<HTMLDivElement>(null);
+  const bsRuleRef = useRef<HTMLDivElement>(null);
+  const bsEyebrowRef = useRef<HTMLDivElement>(null);
+  const bsLetterRefs = useRef<HTMLSpanElement[]>([]);
 
   useEffect(() => {
     let ctx: any;
@@ -127,21 +130,41 @@ export default function Homepage() {
           );
         });
 
-        // Bestsellers title spacer: quick fade-in → long hold → quick fade-out
-        if (bsTitleSectionRef.current && bsTitleRef.current) {
+        // Bestsellers title spacer: hairline + eyebrow + letter-staggered wordmark
+        if (
+          bsTitleSectionRef.current &&
+          bsRuleRef.current &&
+          bsEyebrowRef.current &&
+          bsLetterRefs.current.length > 0
+        ) {
+          const letters = bsLetterRefs.current;
+
+          gsap.set(bsRuleRef.current, {scaleX: 0, opacity: 0, transformOrigin: 'center'});
+          gsap.set(bsEyebrowRef.current, {y: 14, opacity: 0});
+          gsap.set(letters, {y: 34, opacity: 0});
+
           const tl = gsap.timeline({paused: true});
-          tl.fromTo(bsTitleRef.current,
-            {opacity: 0, y: 36},
-            {opacity: 1, y: 0, ease: 'power2.out', duration: 0.15},
-          )
-          .to(bsTitleRef.current, {opacity: 1, duration: 0.70})
-          .to(bsTitleRef.current, {opacity: 0, y: -24, ease: 'power2.in', duration: 0.15});
+          tl.to(bsRuleRef.current,
+            {scaleX: 1, opacity: 1, duration: 0.08, ease: 'power2.out'}, 0.00)
+            .to(bsEyebrowRef.current,
+              {y: 0, opacity: 1, duration: 0.10, ease: 'power2.out'}, 0.06)
+            .to(letters,
+              {y: 0, opacity: 1, duration: 0.18, stagger: 0.018, ease: 'power3.out'}, 0.10)
+            // Empty tween guarantees the hold phase cannot be collapsed by GSAP.
+            .to({}, {duration: 0.44}, 0.28)
+            .to(letters,
+              {y: -22, opacity: 0, duration: 0.14, stagger: 0.014, ease: 'power2.in'}, 0.72)
+            .to(bsEyebrowRef.current,
+              {y: -14, opacity: 0, duration: 0.10, ease: 'power2.in'}, 0.82)
+            .to(bsRuleRef.current,
+              {scaleX: 0, opacity: 0, transformOrigin: 'right center',
+                duration: 0.08, ease: 'power2.in'}, 0.88);
 
           ScrollTrigger.create({
             trigger: bsTitleSectionRef.current,
             start: 'top top',
             end: 'bottom bottom',
-            scrub: 0.2,
+            scrub: 0.25,
             invalidateOnRefresh: true,
             animation: tl,
           });
@@ -154,6 +177,15 @@ export default function Homepage() {
 
   return (
     <>
+      {/* Global continuous Canvas2D backdrop -- always-on, drives
+          constellation/mist/aurora motifs by global scroll progress.
+          Replaces CategoriesWeaveCanvas + WhyMistCanvas + ContinuousAuroraCanvas. */}
+      <ClientOnly>
+        <Suspense fallback={null}>
+          <ContinuousBackdrop />
+        </Suspense>
+      </ClientOnly>
+
       {/* Scrollable HTML overlay -- Hero through Categories (above canvas) */}
       <div
         style={{
@@ -163,65 +195,103 @@ export default function Homepage() {
         }}
       >
         {data.isShopLinked ? null : <MockShopNotice />}
-        <ClientOnly>
-          <Suspense
-            fallback={
-              <section
-                style={{height: '100vh', background: 'transparent'}}
-              />
-            }
-          >
-            <HeroSection />
-          </Suspense>
-        </ClientOnly>
+        <div id="section-hero">
+          <ClientOnly>
+            <Suspense
+              fallback={
+                <section
+                  style={{height: '100vh', background: 'transparent'}}
+                />
+              }
+            >
+              <HeroSection />
+            </Suspense>
+          </ClientOnly>
+        </div>
         {/* Extra hero breathing room -- pushes About section further down */}
         <div style={{height: '200vh'}} aria-hidden="true" />
-        <div id="section-about">
+        <div id="section-about" style={{marginTop: '-120vh'}}>
           <ClientOnly>
             <Suspense fallback={<section style={{height: '100vh'}} />}>
               <AboutSection />
             </Suspense>
           </ClientOnly>
         </div>
-        {/* Bestsellers title card -- fades in then out as carousel entrance begins */}
+        {/* Bestsellers title card: hairline rule, eyebrow, letter-staggered wordmark */}
         <section
+          id="section-bs-title"
           ref={bsTitleSectionRef}
-          style={{height: '180vh', position: 'relative', pointerEvents: 'none'}}
+          style={{height: '180vh', position: 'relative', pointerEvents: 'none', marginTop: '-120vh'}}
           aria-hidden="true"
         >
           <div style={{position: 'sticky', top: 0, height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
-            <div ref={bsTitleRef} style={{textAlign: 'center', opacity: 0}}>
-              <div style={{
-                fontFamily: "'DM Sans', sans-serif",
-                fontWeight: 400,
-                fontSize: 'clamp(0.65rem, 1vw, 0.85rem)',
-                letterSpacing: '0.42em',
-                textTransform: 'uppercase',
-                color: 'rgba(140,170,240,0.65)',
-                marginBottom: '0.8rem',
-              }}>House of An</div>
-              <div style={{
-                fontFamily: "'Cormorant Garamond', serif",
-                fontWeight: 300,
-                fontSize: 'clamp(3rem, 7vw, 8rem)',
-                letterSpacing: '0.24em',
-                textTransform: 'uppercase',
-                color: 'rgba(255,255,255,0.94)',
-                lineHeight: 1,
-                textShadow: '0 0 28px rgba(156,165,255,0.18), 0 0 64px rgba(140,170,240,0.10)',
-                paddingLeft: '0.24em',
-              }}>Bestsellers</div>
+            <div ref={bsTitleRef} style={{textAlign: 'center'}}>
+              <div
+                ref={bsRuleRef}
+                style={{
+                  width: '64px',
+                  height: '1px',
+                  margin: '0 auto 1.1rem',
+                  background: 'linear-gradient(90deg, rgba(96,128,224,0) 0%, rgba(96,128,224,0.9) 50%, rgba(96,128,224,0) 100%)',
+                  willChange: 'transform, opacity',
+                }}
+              />
+              <div
+                ref={bsEyebrowRef}
+                style={{
+                  fontFamily: "'DM Sans', sans-serif",
+                  fontWeight: 400,
+                  fontSize: 'clamp(0.68rem, 0.95vw, 0.85rem)',
+                  letterSpacing: '0.42em',
+                  textTransform: 'uppercase',
+                  color: 'rgba(140,170,240,0.72)',
+                  marginBottom: '1rem',
+                  willChange: 'transform, opacity',
+                }}
+              >
+                House of An
+              </div>
+              <h2
+                aria-hidden="true"
+                style={{
+                  fontFamily: "'Cormorant Garamond', serif",
+                  fontWeight: 300,
+                  fontSize: 'clamp(2.4rem, 8vw, 7.5rem)',
+                  letterSpacing: '0.22em',
+                  textTransform: 'uppercase',
+                  color: 'rgba(255,255,255,0.96)',
+                  lineHeight: 1,
+                  textShadow: '0 0 24px rgba(156,165,255,0.22), 0 0 72px rgba(140,170,240,0.12)',
+                  paddingLeft: '0.22em',
+                  margin: 0,
+                }}
+              >
+                {'BESTSELLERS'.split('').map((char, i) => (
+                  <span
+                    key={i}
+                    ref={(el) => {
+                      if (el) bsLetterRefs.current[i] = el;
+                    }}
+                    style={{
+                      display: 'inline-block',
+                      willChange: 'transform, opacity',
+                    }}
+                  >
+                    {char}
+                  </span>
+                ))}
+              </h2>
             </div>
           </div>
         </section>
-        <div id="section-bestsellers">
+        <div id="section-bestsellers" style={{marginTop: '-120vh'}}>
           <ClientOnly>
             <Suspense fallback={<section style={{height: '500vh'}} />}>
               <BestSellersSection />
             </Suspense>
           </ClientOnly>
         </div>
-        <div id="section-categories">
+        <div id="section-categories" style={{marginTop: '-120vh'}}>
           <ClientOnly>
             <Suspense fallback={<section style={{height: '500vh'}} />}>
               <CategoriesSection />
@@ -232,6 +302,7 @@ export default function Homepage() {
 
       {/* The Why section */}
       <div
+        id="section-why"
         ref={whyWrapperRef}
         style={{
           position: 'relative',
@@ -246,20 +317,14 @@ export default function Homepage() {
         </ClientOnly>
       </div>
 
-      {/* Shared continuous aurora background -- spans Campaign + Lookbook */}
-      <ClientOnly>
-        <Suspense fallback={null}>
-          <ContinuousAuroraCanvas />
-        </Suspense>
-      </ClientOnly>
-
-      {/* Campaign section -- background now shared with Lookbook via ContinuousAuroraCanvas */}
+      {/* Campaign section -- background now handled globally by ContinuousBackdrop */}
       <div
+        id="section-campaign"
         ref={campaignWrapperRef}
         style={{
           position: 'relative',
           zIndex: 1,
-          margin: '0 -1rem',
+          margin: '-120vh -1rem 0',
         }}
       >
         <ClientOnly>
@@ -290,7 +355,7 @@ export default function Homepage() {
         style={{
           position: 'relative',
           zIndex: 1,
-          margin: '0 -1rem',
+          margin: '-120vh -1rem 0',
         }}
       >
         <ClientOnly>

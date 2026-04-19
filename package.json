@@ -17,7 +17,8 @@
     "@react-three/drei": "^9.122.0",
     "@react-three/fiber": "^8.18.0",
     "@react-three/postprocessing": "^2.19.1",
-    "@shopify/hydrogen": "2026.1.3",
+    "@shopify/hydrogen": "^2026.4.1",
+    "@shopify/remix-oxygen": "^3.0.3",
     "graphql": "^16.10.0",
     "graphql-tag": "^2.12.6",
     "gsap": "^3.14.2",
@@ -62,7 +63,7 @@
     "graphql-config": "^5.0.3",
     "prettier": "^3.4.2",
     "typescript": "^5.9.2",
-    "vite": "^6.2.4",
+    "vite": "^6.4.2",
     "vite-tsconfig-paths": "^4.3.1"
   },
   "engines": {
