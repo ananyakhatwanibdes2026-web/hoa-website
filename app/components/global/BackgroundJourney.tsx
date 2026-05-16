@@ -7,8 +7,12 @@ interface ColorStop {
 }
 
 const COLOR_STOPS: ColorStop[] = [
-  // Pure black throughout — shader handles all blue accent lighting
+  // Near-black throughout. Mid-stops are sub-perceptible (ΔE < 2) but give the
+  // body a faint blue undertone so aurora/ember layers don't read against an
+  // inert pure-black void during motif lulls.
   {pos: 0.000, bg: '#000000', text: '#ffffff'},
+  {pos: 0.350, bg: '#040810', text: '#ffffff'},
+  {pos: 0.750, bg: '#05080f', text: '#ffffff'},
   {pos: 1.000, bg: '#000000', text: '#ffffff'},
 ];
 

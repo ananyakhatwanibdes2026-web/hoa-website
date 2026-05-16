@@ -9,7 +9,7 @@ import {EffectComposer, SelectiveBloom, Selection, Select, Vignette} from '@reac
 import * as THREE from 'three';
 import {getLenis} from '~/components/global/SmoothScroll';
 import {aboutSectionState, scenePhaseState} from '~/lib/sceneState';
-import {ParticleField} from '~/components/global/ParticleField';
+import {ParticleField, PersistentParticleThread} from '~/components/global/ParticleField';
 
 if (typeof window !== 'undefined') {
   useGLTF.preload('/models/Logo_element.glb', '/draco/');
@@ -125,15 +125,15 @@ const nightSkyFrag = /* glsl */ `
     aurora = clamp(aurora * band * 1.4, 0.0, 1.0) * scrollCycle;
 
     // ---- Color ----
-    vec3 colDark   = vec3(0.004, 0.008, 0.022);  // near-black
-    vec3 colBlue   = vec3(0.08,  0.20,  0.62);   // bright blue spotlight
-    vec3 colAurora = vec3(0.025, 0.065, 0.200);  // darker blue for FBM depth
+    vec3 colDark   = vec3(0.0,   0.0,   0.008);  // pure black, trace slate
+    vec3 colBlue   = vec3(0.05,  0.06,  0.12);   // muted slate spotlight
+    vec3 colAurora = vec3(0.015, 0.020, 0.045);  // near-black slate FBM
 
     float intensity = spotlight + corona * 0.75 + ambient * 0.5 + aurora * 0.4;
     vec3  col = colDark
               + colBlue   * (spotlight + corona * 0.65 + ambient * 0.38)
               + colAurora * aurora;
-    float alpha = clamp(intensity * 0.72, 0.0, 0.86);
+    float alpha = clamp(intensity * 0.52, 0.0, 0.62);
 
     gl_FragColor = vec4(col, alpha);
   }
@@ -307,7 +307,7 @@ function useStudioChromeEnvMap() {
     panel(3.8, 5, [3.8, 0, 1.2], [0, -Math.PI / 2, 0], '#f2f4f8', 1.6);
     panel(5, 3, [0, 0.2, 4.2], [0, 0, 0], '#e8eaf0', 1.2);
     panel(5, 3, [0, 0.2, -4.2], [0, Math.PI, 0], '#dcdde2', 0.7);
-    panel(6, 6, [0, -3.2, 0], [-Math.PI / 2, 0, 0], '#0a0a0c', 0.2);
+    panel(6, 6, [0, -3.2, 0], [-Math.PI / 2, 0, 0], '#3a3c42', 0.55);
 
     const cam = new THREE.CubeCamera(0.1, 50, rt);
     scene.add(cam);
@@ -332,11 +332,11 @@ function LogoModel() {
     scene.traverse((child: any) => {
       if (!child.isMesh) return;
       const mat = new THREE.MeshPhysicalMaterial({
-        color: new THREE.Color('#eef0f2'),
+        color: new THREE.Color('#b4b8c0'),
         metalness: 1.0,
-        roughness: 0.16,
+        roughness: 0.14,
         envMap,
-        envMapIntensity: 1.0,
+        envMapIntensity: 1.3,
         emissive: new THREE.Color('#000000'),
         emissiveIntensity: 0.0,
         clearcoat: 0.0,
@@ -378,12 +378,17 @@ function LogoModel() {
     scrollRef.current = lerp(scrollRef.current, sp, 0.06);
     const smoothSp = scrollRef.current;
 
-    const rotSpeed = smoothSp * Math.PI * 32;
+    const rotSpeed = smoothSp * Math.PI * 24;
     rotYRef.current = lerp(rotYRef.current, rotSpeed, 1 - logoFade * 0.97);
     groupRef.current.rotation.y = rotYRef.current;
 
     const breathe = 1.0 + Math.sin(t * 0.4) * 0.01;
     groupRef.current.scale.setScalar(1.4 * Math.max(0.05, 1.0 - smoothSp * 3.0) * breathe);
+
+    // Hero-only downward drift: logo slowly settles down as user scrolls
+    // through hero, then locks once past the hero zone.
+    const heroDrift = smoothstep(0, 0.18, smoothSp) * -0.6;
+    groupRef.current.position.y = 0.3 + heroDrift;
 
     const logoOpacity = 1 - logoFade;
     for (const mat of logoMatsRef.current) {
@@ -496,7 +501,7 @@ function AnimatedEnvironment() {
         position={[-10, 5, -5]}
         rotation-y={Math.PI / 4}
         scale={[5, 20, 1]}
-        color="#b0ccff"
+        color="#cfd4dc"
       />
       <Lightformer
         intensity={3}
@@ -509,7 +514,7 @@ function AnimatedEnvironment() {
         intensity={1.5}
         position={[0, 0, 12]}
         scale={[30, 20, 1]}
-        color="#c0ccf0"
+        color="#d4d4dc"
       />
       <Lightformer
         intensity={0.3}
@@ -519,10 +524,10 @@ function AnimatedEnvironment() {
         color="#080808"
       />
       <Lightformer
-        intensity={3.5}
+        intensity={1.8}
         position={[0, 2, -10]}
         scale={[60, 40, 1]}
-        color="#1a50c8"
+        color="#1c2238"
       />
     </Environment>
   );
@@ -603,11 +608,11 @@ interface StarConfig {
 
 const STAR_CONFIGS: StarConfig[] = [
   // --- FOREGROUND (5) z: -1.5 to -2.5 -- large, strong parallax, high opacity ---
-  {pos: [-6.5,  3.8, -2.0], scale: 0.45, rotX: 0.004, rotY: 0.009, rotZ: 0.003, floatSpeed: 0.38, parallax: 0.72, phase: 0.0, color: '#b0cce8', maxOpacity: 0.95},
-  {pos: [ 7.2,  2.8, -1.8], scale: 0.52, rotX: 0.007, rotY: 0.005, rotZ: 0.008, floatSpeed: 0.28, parallax: 0.68, phase: 1.5, color: '#a0c4fc', maxOpacity: 1.00},
-  {pos: [-4.5, -3.5, -2.2], scale: 0.38, rotX: 0.006, rotY: 0.004, rotZ: 0.005, floatSpeed: 0.44, parallax: 0.76, phase: 2.8, color: '#b8d0f0', maxOpacity: 0.90},
-  {pos: [ 5.5, -3.8, -1.5], scale: 0.42, rotX: 0.005, rotY: 0.008, rotZ: 0.004, floatSpeed: 0.32, parallax: 0.64, phase: 4.0, color: '#c8e0ff', maxOpacity: 0.95},
-  {pos: [ 1.5,  5.5, -2.5], scale: 0.48, rotX: 0.003, rotY: 0.007, rotZ: 0.006, floatSpeed: 0.22, parallax: 0.58, phase: 5.5, color: '#aacaf4', maxOpacity: 0.92},
+  {pos: [-6.5,  3.8, -2.0], scale: 0.45, rotX: 0.004, rotY: 0.009, rotZ: 0.003, floatSpeed: 0.38, parallax: 0.72, phase: 0.0, color: '#d0d4dc', maxOpacity: 0.95},
+  {pos: [ 7.2,  2.8, -1.8], scale: 0.52, rotX: 0.007, rotY: 0.005, rotZ: 0.008, floatSpeed: 0.28, parallax: 0.68, phase: 1.5, color: '#a8b0c0', maxOpacity: 1.00},
+  {pos: [-4.5, -3.5, -2.2], scale: 0.38, rotX: 0.006, rotY: 0.004, rotZ: 0.005, floatSpeed: 0.44, parallax: 0.76, phase: 2.8, color: '#cccfd6', maxOpacity: 0.90},
+  {pos: [ 5.5, -3.8, -1.5], scale: 0.42, rotX: 0.005, rotY: 0.008, rotZ: 0.004, floatSpeed: 0.32, parallax: 0.64, phase: 4.0, color: '#e0e2e6', maxOpacity: 0.95},
+  {pos: [ 1.5,  5.5, -2.5], scale: 0.48, rotX: 0.003, rotY: 0.007, rotZ: 0.006, floatSpeed: 0.22, parallax: 0.58, phase: 5.5, color: '#b8bcc6', maxOpacity: 0.92},
   // --- MIDGROUND (12) z: -3 to -5 ---
   {pos: [-3.5,  2.5, -3.0], scale: 0.25, rotX: 0.003, rotY: 0.007, rotZ: 0.002, floatSpeed: 0.40, parallax: 0.38, phase: 0.5, color: '#c8c8d4', maxOpacity: 0.92},
   {pos: [ 4.2,  2.2, -4.0], scale: 0.20, rotX: 0.005, rotY: 0.003, rotZ: 0.006, floatSpeed: 0.30, parallax: 0.30, phase: 1.2, color: '#aabbd8', maxOpacity: 0.88},
@@ -794,11 +799,11 @@ function RockInstance({config}: {config: RockConfig}) {
     scene.traverse((child: any) => {
       if (!child.isMesh) return;
       const mat = new THREE.MeshPhysicalMaterial({
-        color: new THREE.Color('#88acd0'),
+        color: new THREE.Color('#58606a'),
         metalness: 0.95,
         roughness: 0.18,
         envMapIntensity: 2.0,
-        emissive: new THREE.Color('#1a3870'),
+        emissive: new THREE.Color('#14171f'),
         emissiveIntensity: 0.08,
         clearcoat: 0.3,
         clearcoatRoughness: 0.12,
@@ -924,6 +929,10 @@ function Scene({isMobile}: {isMobile: boolean}) {
       )}
       {/* Particle field: volumetric blue drift, hero zone only, outside Select (not bloomed) */}
       {!heroGone && <ParticleField />}
+
+      {/* Persistent through-line: low-density periwinkle drift, always mounted.
+          Spans full scroll so every section shares the same spatial anchor. */}
+      <PersistentParticleThread />
 
       <LogoModel />
 

@@ -9,6 +9,7 @@ export type CardConfig = {
   author: string;
   stars?: number;
   tapeColor?: string;
+  image?: string;
   x: number;
   rotate: number;
 };
@@ -18,6 +19,7 @@ export default function TestimonialCard({
   author,
   stars = 5,
   tapeColor = 'linear-gradient(135deg, rgba(140,165,225,0.55) 0%, rgba(100,132,210,0.40) 60%, rgba(140,165,225,0.55) 100%)',
+  image,
   x,
   rotate,
 }: CardConfig) {
@@ -83,6 +85,16 @@ export default function TestimonialCard({
   }, [rotate, x]);
 
   return (
+    <>
+      <style>{`
+        .tf-card .tf-card-content {
+          opacity: 0;
+          transition: opacity 0.32s ease;
+        }
+        .tf-card:hover .tf-card-content {
+          opacity: 1;
+        }
+      `}</style>
     <div
       ref={cardRef}
       className="tf-card"
@@ -120,7 +132,7 @@ export default function TestimonialCard({
         <div
           style={{
             flex: 1,
-            background: '#0c0f1e',
+            background: image ? `#0c0f1e url(${image}) center/cover no-repeat` : '#0c0f1e',
             borderRadius: '1px',
             display: 'flex',
             flexDirection: 'column',
@@ -128,15 +140,32 @@ export default function TestimonialCard({
             justifyContent: 'center',
             padding: '14px 10px 10px',
             overflow: 'hidden',
+            position: 'relative',
           }}
         >
+          {image && (
+            <div
+              aria-hidden
+              style={{
+                position: 'absolute',
+                inset: 0,
+                background:
+                  'linear-gradient(to bottom, rgba(12,15,30,0.55) 0%, rgba(12,15,30,0.10) 35%, rgba(12,15,30,0.10) 60%, rgba(12,15,30,0.82) 100%)',
+                pointerEvents: 'none',
+              }}
+            />
+          )}
           {/* Stars */}
           <div
+            className="tf-card-content"
             style={{
               fontSize: '11px',
               color: 'rgba(198, 174, 88, 0.92)',
               letterSpacing: '3px',
               marginBottom: '10px',
+              position: 'relative',
+              zIndex: 1,
+              textShadow: image ? '0 1px 6px rgba(0,0,0,0.65)' : undefined,
             }}
           >
             {'★'.repeat(Math.max(0, Math.min(5, stars)))}
@@ -144,15 +173,19 @@ export default function TestimonialCard({
 
           {/* Quote -- Cormorant Garamond italic for luxury feel */}
           <p
+            className="tf-card-content"
             style={{
               fontFamily: 'var(--font-display, "Cormorant Garamond", serif)',
               fontStyle: 'italic',
               fontWeight: 300,
               fontSize: '14px',
               lineHeight: 1.48,
-              color: 'rgba(200, 208, 234, 0.88)',
+              color: image ? 'rgba(240, 244, 255, 0.96)' : 'rgba(200, 208, 234, 0.88)',
               textAlign: 'center',
               margin: 0,
+              position: 'relative',
+              zIndex: 1,
+              textShadow: image ? '0 1px 8px rgba(0,0,0,0.75)' : undefined,
             }}
           >
             &ldquo;{quote}&rdquo;
@@ -161,6 +194,7 @@ export default function TestimonialCard({
 
         {/* Author -- sits in the dark polaroid bottom strip */}
         <div
+          className="tf-card-content"
           style={{
             position: 'absolute',
             bottom: '9px',
@@ -184,5 +218,6 @@ export default function TestimonialCard({
         </div>
       </div>
     </div>
+    </>
   );
 }

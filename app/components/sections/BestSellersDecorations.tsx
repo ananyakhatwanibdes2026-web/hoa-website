@@ -95,13 +95,13 @@ export function BSDriftParticles({ isMobile }: { isMobile: boolean }) {
       // Mix: 60% cool blue-silver, 25% periwinkle, 10% ice white, 5% warm gold
       const r = Math.random();
       if (r < 0.60) {
-        col[i * 3] = 0.54; col[i * 3 + 1] = 0.69; col[i * 3 + 2] = 0.94; // #8ab0f0 blue-silver
+        col[i * 3] = 0.66; col[i * 3 + 1] = 0.68; col[i * 3 + 2] = 0.73; // cool silver
       } else if (r < 0.85) {
-        col[i * 3] = 0.61; col[i * 3 + 1] = 0.65; col[i * 3 + 2] = 1.00; // #9ca5ff periwinkle
+        col[i * 3] = 0.78; col[i * 3 + 1] = 0.80; col[i * 3 + 2] = 0.88; // faint periwinkle accent
       } else if (r < 0.95) {
-        col[i * 3] = 0.88; col[i * 3 + 1] = 0.95; col[i * 3 + 2] = 1.00; // ice white
+        col[i * 3] = 0.90; col[i * 3 + 1] = 0.92; col[i * 3 + 2] = 0.95; // off-white
       } else {
-        col[i * 3] = 0.86; col[i * 3 + 1] = 0.72; col[i * 3 + 2] = 0.32; // #dbb852 warm gold
+        col[i * 3] = 0.86; col[i * 3 + 1] = 0.72; col[i * 3 + 2] = 0.32; // warm gold accent
       }
     }
     const geo = new THREE.BufferGeometry();
@@ -151,13 +151,13 @@ export function BSDriftParticles({ isMobile }: { isMobile: boolean }) {
 // AdditiveBlending so they self-glow without needing bloom Select.
 // ---------------------------------------------------------------------------
 const ORB_CONFIGS = [
-  { pos: [-9.5,  5.5, -5.0] as [number, number, number], color: '#3858c8', radius: 0.28, phase: 0.0, px: 0.35 },
-  { pos: [ 9.0, -4.0, -6.5] as [number, number, number], color: '#2848b8', radius: 0.23, phase: 1.3, px: 0.28 },
-  { pos: [-7.0, -7.5, -7.0] as [number, number, number], color: '#4060c0', radius: 0.31, phase: 2.2, px: 0.22 },
-  { pos: [ 8.5,  7.0, -5.5] as [number, number, number], color: '#3050b8', radius: 0.25, phase: 3.5, px: 0.30 },
-  { pos: [ 0.5, -10.5, -8.0] as [number, number, number], color: '#2840b0', radius: 0.35, phase: 4.1, px: 0.18 },
-  { pos: [-11.0,  0.5, -6.0] as [number, number, number], color: '#4870c8', radius: 0.20, phase: 5.0, px: 0.32 },
-  { pos: [ 0.0,   0.0, -9.5] as [number, number, number], color: '#2030c0', radius: 0.55, phase: 2.8, px: 0.08 },
+  { pos: [-9.5,  5.5, -5.0] as [number, number, number], color: '#22262e', radius: 0.28, phase: 0.0, px: 0.35 },
+  { pos: [ 9.0, -4.0, -6.5] as [number, number, number], color: '#1c2028', radius: 0.23, phase: 1.3, px: 0.28 },
+  { pos: [-7.0, -7.5, -7.0] as [number, number, number], color: '#252932', radius: 0.31, phase: 2.2, px: 0.22 },
+  { pos: [ 8.5,  7.0, -5.5] as [number, number, number], color: '#1e222a', radius: 0.25, phase: 3.5, px: 0.30 },
+  { pos: [ 0.5, -10.5, -8.0] as [number, number, number], color: '#1a1e26', radius: 0.35, phase: 4.1, px: 0.18 },
+  { pos: [-11.0,  0.5, -6.0] as [number, number, number], color: '#2a2e3a', radius: 0.20, phase: 5.0, px: 0.32 },
+  { pos: [ 0.0,   0.0, -9.5] as [number, number, number], color: '#181a22', radius: 0.55, phase: 2.8, px: 0.08 },
 ];
 
 function BSOrb({ config }: { config: typeof ORB_CONFIGS[0] }) {
@@ -197,7 +197,7 @@ function BSOrb({ config }: { config: typeof ORB_CONFIGS[0] }) {
     const ep = bestsellersSectionState.entranceProgress;
     const delay = 0.30 + (config.phase / 5.0) * 0.25;
     const disperseFade = Math.max(0, 1.0 - disperseRef.current * 1.8);
-    const targetOp = smoothstep(delay, delay + 0.30, ep) * disperseFade * 0.82;
+    const targetOp = smoothstep(delay, delay + 0.30, ep) * disperseFade * 0.55;
     opacityRef.current = lerp(opacityRef.current, targetOp, 0.04);
     mat.opacity = opacityRef.current;
   });
@@ -235,7 +235,7 @@ function BSRing({ config }: { config: typeof RING_CONFIGS[0] }) {
   const disperseRef = useRef(0);
 
   const mat = useMemo(() => new THREE.MeshBasicMaterial({
-    color: new THREE.Color('#5868a8'),
+    color: new THREE.Color('#3a3f4e'),
     transparent: true,
     opacity: 0,
     side: THREE.DoubleSide,

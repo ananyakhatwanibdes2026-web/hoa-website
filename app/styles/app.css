@@ -469,24 +469,203 @@ button.reset:hover:not(:has(> *)) {
 * routes/collections.$handle.tsx
 * --------------------------------------------------
 */
+.collection {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  background: #0a0a0a;
+  color: rgba(255, 255, 255, 0.92);
+  padding: clamp(96px, 12vh, 140px) clamp(20px, 4vw, 56px) 80px;
+}
+
+.collection h1 {
+  font-family: var(--font-display, 'Cormorant Garamond', serif);
+  font-weight: 300;
+  font-size: clamp(2rem, 5vw, 3.4rem);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  margin: 0 0 12px;
+  color: rgba(255, 255, 255, 0.96);
+}
+
 .collection-description {
-  margin-bottom: 1rem;
-  max-width: 95%;
-  @media (min-width: 45em) {
-    max-width: 600px;
-  }
+  font-family: var(--font-body, 'DM Sans', sans-serif);
+  font-size: 0.9rem;
+  font-weight: 300;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.55);
+  margin: 0 0 48px;
+  max-width: 600px;
 }
 
 .products-grid {
   display: grid;
-  grid-gap: 1.5rem;
-  grid-template-columns: repeat(auto-fit, minmax(var(--grid-item-width), 1fr));
+  gap: clamp(20px, 2.4vw, 36px);
+  grid-template-columns: repeat(auto-fit, minmax(var(--grid-item-width, 240px), 1fr));
   margin-bottom: 2rem;
 }
 
+.product-item {
+  display: block;
+  background: #111319;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  padding: 14px;
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.3s ease, border-color 0.3s ease;
+}
+
+.product-item:hover {
+  transform: translateY(-4px);
+  border-color: rgba(148, 175, 228, 0.32);
+}
+
 .product-item img {
-  height: auto;
+  display: block;
   width: 100%;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.product-item h4 {
+  font-family: var(--font-body, 'DM Sans', sans-serif);
+  font-size: 0.95rem;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.86);
+  margin: 12px 0 6px;
+}
+
+.product-item small {
+  font-family: var(--font-body, 'DM Sans', sans-serif);
+  font-size: 0.82rem;
+  color: rgba(148, 175, 228, 0.78);
+}
+
+/* /shop — single-scroll stack of Edge / Sculpt / Elite */
+.shop {
+  position: relative;
+  z-index: 1;
+}
+
+.shop > .collection {
+  scroll-margin-top: 96px;
+}
+
+.shop > .collection + .collection {
+  padding-top: clamp(64px, 8vh, 96px);
+}
+
+/* Premium white treatment for Edge / Sculpt / Elite (desktop only) */
+@media (min-width: 45em) {
+  .collection[data-handle='edge'],
+  .collection[data-handle='sculpt'],
+  .collection[data-handle='elite'] {
+    background:
+      radial-gradient(
+        ellipse at 22% 8%,
+        rgba(245, 246, 251, 0.9) 0%,
+        rgba(255, 255, 255, 0) 55%
+      ),
+      radial-gradient(
+        ellipse at 50% 50%,
+        #ffffff 0%,
+        #f6f3ee 100%
+      );
+    color: rgba(20, 24, 40, 0.92);
+  }
+
+  .collection[data-handle='edge'] {
+    background:
+      radial-gradient(
+        ellipse 60% 50% at 88% 12%,
+        rgba(223, 228, 236, 0.55) 0%,
+        rgba(223, 228, 236, 0) 70%
+      ),
+      radial-gradient(
+        ellipse at 22% 8%,
+        rgba(245, 246, 251, 0.9) 0%,
+        rgba(255, 255, 255, 0) 55%
+      ),
+      radial-gradient(ellipse at 50% 50%, #ffffff 0%, #eef0f4 100%);
+  }
+
+  .collection[data-handle='sculpt'] {
+    background:
+      radial-gradient(
+        ellipse 60% 50% at 88% 12%,
+        rgba(239, 229, 212, 0.55) 0%,
+        rgba(239, 229, 212, 0) 70%
+      ),
+      radial-gradient(
+        ellipse at 22% 8%,
+        rgba(252, 248, 240, 0.9) 0%,
+        rgba(255, 255, 255, 0) 55%
+      ),
+      radial-gradient(ellipse at 50% 50%, #ffffff 0%, #f6f0e6 100%);
+  }
+
+  .collection[data-handle='elite'] {
+    background:
+      radial-gradient(
+        ellipse 60% 50% at 88% 12%,
+        rgba(244, 236, 216, 0.55) 0%,
+        rgba(244, 236, 216, 0) 70%
+      ),
+      radial-gradient(
+        ellipse 50% 40% at 18% 82%,
+        rgba(156, 165, 255, 0.08) 0%,
+        rgba(156, 165, 255, 0) 70%
+      ),
+      radial-gradient(ellipse at 50% 50%, #ffffff 0%, #f4ecd8 100%);
+  }
+
+  .collection[data-handle='edge'] h1,
+  .collection[data-handle='sculpt'] h1,
+  .collection[data-handle='elite'] h1 {
+    color: rgba(20, 24, 40, 0.94);
+    border-bottom: 1px solid rgba(96, 128, 224, 0.22);
+    padding-bottom: 14px;
+    display: inline-block;
+  }
+
+  .collection[data-handle='edge'] .collection-description,
+  .collection[data-handle='sculpt'] .collection-description,
+  .collection[data-handle='elite'] .collection-description {
+    color: rgba(20, 24, 40, 0.6);
+  }
+
+  .collection[data-handle='edge'] .product-item,
+  .collection[data-handle='sculpt'] .product-item,
+  .collection[data-handle='elite'] .product-item {
+    background: #ffffff;
+    border: 1px solid rgba(20, 24, 40, 0.06);
+    box-shadow: 0 12px 40px rgba(20, 30, 80, 0.06);
+    transition:
+      transform 0.3s ease,
+      border-color 0.3s ease,
+      box-shadow 0.3s ease;
+  }
+
+  .collection[data-handle='edge'] .product-item:hover,
+  .collection[data-handle='sculpt'] .product-item:hover,
+  .collection[data-handle='elite'] .product-item:hover {
+    border-color: rgba(96, 128, 224, 0.42);
+    box-shadow: 0 18px 56px rgba(20, 30, 80, 0.1);
+  }
+
+  .collection[data-handle='edge'] .product-item h4,
+  .collection[data-handle='sculpt'] .product-item h4,
+  .collection[data-handle='elite'] .product-item h4 {
+    color: rgba(20, 24, 40, 0.88);
+  }
+
+  .collection[data-handle='edge'] .product-item small,
+  .collection[data-handle='sculpt'] .product-item small,
+  .collection[data-handle='elite'] .product-item small {
+    color: rgba(96, 128, 224, 0.92);
+  }
 }
 
 /*

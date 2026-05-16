@@ -53,3 +53,11 @@ export const collectionsSectionState = {
   entranceProgress: 0,   // 0→1 across first 15% of section
   shatterProgress: 0,    // 0→1 across last 15% of section
 };
+
+// Global page scroll progress (0→1 across full document height).
+// Written once per frame by a single ScrollTrigger in _index.tsx; consumed
+// by cross-section bridges to coordinate outgoing/incoming animation without
+// double-owning DOM nodes.
+export const pageFlow = {
+  pageProgress: 0,
+};

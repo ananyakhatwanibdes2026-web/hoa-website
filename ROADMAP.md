@@ -1,5 +1,20 @@
 # HOUSE OF AN -- Roadmap
 
+## Surface Polish + Inner-Page Foundation (2026-04-25) [COMPLETE]
+- Footer reduced to minimal block (brand + 3 socials + copyright + 3 policy links).
+- Testimonial cards now hover-reveal text (cards read clean at idle).
+- Lookbook left side asymmetric stride — two past images visible during focal window.
+- Spiral material immune to sapphire env reflections (pure silver).
+- **Route gating**: home-only globals (`SceneCanvas`, `GlobalEffects`, `AmbientTicker`, `CornerTicker`) now guarded by `useLocation()` in `root.tsx`. Inner pages (`/collections/*`, `/products/*`) render clean.
+- `.collection` page given dedicated styling. PDP styling still pending (route gate already applies).
+- Still chrome AN logos (About + Why) animated with pointer parallax + vertical bob + envMap shimmer for ambient interactivity.
+- `framer-motion` added to dep tree; `EdgeScrollGallery` component scaffolded for future Edge collection scroll experience (not yet wired in).
+
+## Visual System Pass (2026-04-22) [COMPLETE]
+- Motion direction unified bottom→up across scroll reveals, route transitions, and overlays (Lookbook carousel + Aside drawers explicitly out of scope).
+- Palette shifted from blue-dominant to near-black + faint slate tint; UI accent periwinkle preserved for interactive chrome.
+- Shared motion tokens live in `app/lib/motion.ts` — new sections should import rather than redeclare.
+
 ## Phase 1: Foundation [COMPLETE]
 Store setup, Hydrogen scaffolding, dependencies, 3D asset conversion.
 
@@ -47,8 +62,11 @@ Store setup, Hydrogen scaffolding, dependencies, 3D asset conversion.
 40. ~~AT UI chrome (2026-04-14): split glass pill nav, SideRail left rail, AmbientTicker color-dodge, CornerTicker marquee, RouteTransition black overlay, ParticleField 12k points in hero. All wired into root.tsx.~~ DONE
 41. ~~Unified Campaign+Lookbook aurora + scroll-gap compression (2026-04-17): ContinuousAuroraCanvas (shared `position:fixed` Canvas2D, 4 ribbons, ~70% boosted alpha/amp, phase stitched across section seam, floor rises to `#000` for TestimonialsFooter handoff). CampaignMonolithBg + LookbookAuroraCanvas deleted. Campaign timeline reworked 3→3.2 units with pre-exit HOLD so card1 doesn't leave early. Why + Lookbook wrappers `-60vh → -120vh` (Campaign wrapper `0`) -- ~60vh shorter at each transition. Lookbook animST delayed to `top+=120vh top` so carousel stays still during Campaign overlap. Envelopes widened/shifted for smoother crossfade (Campaign exit 0.85→1, Lookbook enter 0.20→0.34).~~ DONE
 42. ~~Scroll-synced SideRail nav (2026-04-19): 4 buttons → 7 anchor-link scrollspy (Home / About / Bestsellers / Categories / The Why / Campaign / Lookbook). `<button>` → `<a>`, `<nav aria-label>` wrapper. Active item styled with 0.98rem / weight 500 / pure white / widened letter-spacing / translateX(16px) / periwinkle glow / 22px hairline indicator. Base size bumped (0.82rem / 32px left / 1.6rem gap). Single `IntersectionObserver` at `-45%` rootMargin drives the active label; Bestsellers entry spans `section-bs-title` + `section-bestsellers`. `_index.tsx` got 4 new IDs (`section-hero`, `section-bs-title`, `section-why`, `section-campaign`).~~ DONE
-43. Post-processing polish (chromatic aberration -- Bloom currently disabled, can be re-enabled)
-44. Performance optimization + mobile pass
+43. ~~Continuous-scroll bridging pass (2026-04-19 pt2): addresses client brief "pages still look separated, need one singular smooth scroll". ContinuousBackdrop envelopes widened so ≥2 motifs co-visible at every seam (constellation `0.08-0.22 / 0.50-0.66`, mist `0.32-0.50 / 0.68-0.80`, aurora `0.50-0.66 / 0.92-1.00`); base alphas trimmed ~15% to prevent 3-motif mud at sp≈0.55. New always-on ember layer (6 desktop / 3 mobile slow Lissajous radial blobs, alpha 0.05-0.075, weight 1.0) renders first each frame so backdrop is never inert. Mist phase driver switched from local remap to global `sp*6.28*1.1` so pattern doesn't snap back on back-scroll. Floor-rise start edge `0.88→0.82` for earlier Lookbook→Testimonials glue. New `PersistentParticleThread` (Tier B, 2.5k desktop / 800 mobile / 500 low-end, #6080e0, additive, cylinder `y:±30`, drifts with scroll delta, recycles at bounds) mounted OUTSIDE the `heroGone` gate — same blue particle field spans hero→footer as spatial through-line. `pageFlow.pageProgress` added to sceneState, written from a single body-scoped ScrollTrigger in _index.tsx (scrub:0). Campaign + Lookbook visual envelopes widened to `smoothstep(0,0.22)*(1-smoothstep(0.72,1))` (Lookbook keeps 0.15 floor for the 120vh Campaign overlap — so effective band is `0.15-0.37` / `0.72-1`); crossfade stretches from ~60vh to ~125vh at each join. WhySection wired with its own sticky outro — sticky-inner opacity `1 - smoothstep(0.85, 1.0, sp)` via a new `stickyRef`, creates a virtual crossfade into Campaign (Why→Campaign has no DOM margin overlap). BackgroundJourney gets two sub-perceptible mid-stops (`{0.35, #040810}`, `{0.75, #05080f}`, ΔE<2 from #000) so DOM body reads as alive during motif lulls. Typecheck clean.~~ DONE
+44. ~~Hero wordmark remake (2026-04-21): HeroSection rebuilt 270vh absolute → 300vh sticky-inner. GSAP ScrollTrigger scrub:0.2 reveals "HOUSE" then "OF" via clip-path curtain + y-rise + tracking settle. AN word dropped — global 3D AN_Logo completes the wordmark. Stack anchored top (paddingTop:10vh) above the centered logo. Typography upscaled to `clamp(2.6rem, 9vw, 9rem)`. Removed heroFloat bob + 0.5s delay fade.~~ DONE
+45. ~~Polish pass (2026-04-21 pt2): (a) AboutStillLogo material/env mirrors hero LogoModel (local `useStudioChromeEnvMap` + `#eef0f2` polished studio chrome, Lightformers dropped). (b) Lookbook side scales 0.65/0.50/0.38 → 0.48/0.34/0.24. (c) ContinuousBackdrop `drawAurora` removed — no more wavy background on Campaign/Lookbook. (d) Spiral swap: `/models/Spiral.glb` → `/spiral%20new.glb`, material silver chrome (was blue iridescent), two stacked instances → single instance at y=0, scale `26/size.y` for full viewport coverage.~~ DONE
+45. Post-processing polish (chromatic aberration -- Bloom currently disabled, can be re-enabled)
+46. Performance optimization + mobile pass
 
 ## Phase 3: Inner Pages
 - PDP (stacked card image gallery, slide-up transitions, custom 3D cursor on gallery)
@@ -79,7 +97,7 @@ Note: 125vh Hero-to-About spacer removed in earlier session. No spacer between H
 | Categories | 300vh (sticky 100vh) | 3 floating portrait cards | Blue-dark radial `#1a2038->#060c18`, blue conic sweep borders (AT palette) |
 | The Why | 100vh | Two-column editorial | Dark navy-to-blue `#08101e->#5a80aa` (AT palette, updated 2026-04-11) |
 | Campaign | 600vh (sticky 100vh) | 3-card physical stack | Cards: #1a1a24, #0e1828, #161220 (already AT-aligned) |
-| Lookbook | 700vh (sticky 100vh) | 6-image horizontal focal gallery | Deep navy `#06122a->#02040f` (AT palette, updated 2026-04-11). Blue focal frame. |
+| Lookbook | 920vh (sticky 100vh) | 6-image horizontal focal gallery. 180vh pre-roll + 5×148vh swaps (power2.inOut, scrub 0.6). No opacity fades. | Shared backdrop (ContinuousBackdrop). Blue focal frame. |
 | Testimonials+Footer | ~120vh | Polaroid cards + 5-column footer | `#8ab0d0->#1e3460` blue-silver to navy (matches BackgroundJourney 82% stop, updated 2026-04-11) |
 
 ## Content Dependencies (from Ananyaa)

@@ -5,11 +5,6 @@ import {lookbookSectionState} from '~/lib/sceneState';
 
 gsap.registerPlugin(ScrollTrigger);
 
-function smoothstep(edge0: number, edge1: number, x: number) {
-  const t = Math.min(1, Math.max(0, (x - edge0) / (edge1 - edge0)));
-  return t * t * (3 - 2 * t);
-}
-
 const PLACEHOLDER_COLORS = [
   '#2a1f1a',
   '#1f2a2a',
@@ -33,17 +28,17 @@ const LOOKBOOK_IMAGES = [
 function offsetScale(offset: number): number {
   const abs = Math.abs(offset);
   if (abs === 0) return 1.0;
-  if (abs === 1) return 0.65;
-  if (abs === 2) return 0.50;
-  return 0.38;
+  if (abs === 1) return 0.42;
+  if (abs === 2) return 0.30;
+  return 0.20;
 }
 
 function offsetOpacity(offset: number): number {
   if (offset === 0) return 1.0;
   // Past (left): stay visible while in-frame, fade only as image exits left edge
   if (offset < 0) {
-    if (offset === -1) return 0.78;
-    if (offset === -2) return 0.32;
+    if (offset === -1) return 0.85;
+    if (offset === -2) return 0.70;
     return 0.10;
   }
   // Upcoming (right)
@@ -70,14 +65,17 @@ export default function LookbookSection() {
     // leaving the left portion for past images to travel through.
     const galleryW = gallery.offsetWidth;
     const STRIDE = galleryW * 0.32;
+    const LEFT_STRIDE = galleryW * 0.18;
     const FOCAL_SHIFT = galleryW * 0.10;
+    const offsetX = (off: number) =>
+      FOCAL_SHIFT + (off >= 0 ? off * STRIDE : off * LEFT_STRIDE);
 
     // Center all images at gallery center, then apply focal shift + offset
     gsap.set(imgs, {xPercent: -50, yPercent: -50});
 
     for (let i = 0; i < IMAGE_COUNT; i++) {
       gsap.set(imgs[i], {
-        x: FOCAL_SHIFT + i * STRIDE,
+        x: offsetX(i),
         scale: offsetScale(i),
         opacity: offsetOpacity(i),
       });
@@ -91,7 +89,7 @@ export default function LookbookSection() {
         tl.to(
           imgs[i],
           {
-            x: FOCAL_SHIFT + endOffset * STRIDE,
+            x: offsetX(endOffset),
             scale: offsetScale(endOffset),
             opacity: offsetOpacity(endOffset),
             ease: 'none',
@@ -110,13 +108,6 @@ export default function LookbookSection() {
       onUpdate: (self) => {
         lookbookSectionState.active = self.isActive;
         lookbookSectionState.sectionProgress = self.progress;
-        const sp = self.progress;
-        // Fade in only AFTER Campaign fully clears (overlap = 120vh = sp 0.24),
-        // so Lookbook never visibly competes with Campaign. Hold until 0.92.
-        const envelope = smoothstep(0.15, 0.22, sp) * (1 - smoothstep(0.92, 1, sp));
-        if (visualRef.current) {
-          visualRef.current.style.opacity = envelope.toFixed(3);
-        }
       },
       onLeave: () => {
         lookbookSectionState.active = false;
@@ -126,15 +117,15 @@ export default function LookbookSection() {
       },
     });
 
-    // Carousel waits until Campaign overlap (120vh) clears + a 360vh static
-    // pre-roll so image 1 sits idle in focal long enough that a quick scroll
-    // still lands the user on it, not mid-transition. Section is 800vh;
-    // animation range: 800vh - 480vh = 320vh / 5 transitions = 64vh per swap.
+    // Section is 920vh. 180vh pre-roll (image 1 static) then 740vh animation
+    // running to the section bottom — 5 swaps × 148vh each, power2.inOut ease.
+    // No post-roll: image 6 reaches focal at the section end so footer rises
+    // immediately. scrub:0.6 keeps fast scrolls smooth.
     const animST = ScrollTrigger.create({
       trigger: section,
-      start: 'top+=480vh top',
+      start: 'top+=90vh top',
       end: 'bottom bottom',
-      scrub: 0.08,
+      scrub: 0.25,
       animation: tl,
     });
 
@@ -158,7 +149,7 @@ export default function LookbookSection() {
 
         .lookbook-section {
           position: relative;
-          height: 800vh;
+          height: 550vh;
         }
 
         /* Sticky viewport -- gallery fills it entirely, text floats above */

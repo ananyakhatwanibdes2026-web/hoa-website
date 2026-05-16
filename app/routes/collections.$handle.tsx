@@ -69,7 +69,7 @@ export default function Collection() {
   const {collection} = useLoaderData<typeof loader>();
 
   return (
-    <div className="collection">
+    <div className="collection" data-handle={collection.handle}>
       <h1>{collection.title}</h1>
       <p className="collection-description">{collection.description}</p>
       <PaginatedResourceSection<ProductItemFragment>

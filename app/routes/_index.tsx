@@ -8,6 +8,7 @@ import type {
 } from 'storefrontapi.generated';
 import {ProductItem} from '~/components/ProductItem';
 import {MockShopNotice} from '~/components/MockShopNotice';
+import {pageFlow} from '~/lib/sceneState';
 
 // Dynamic imports -- three/R3F/drei/fflate never enter the SSR bundle.
 const HeroSection = lazy(
@@ -112,6 +113,18 @@ export default function Homepage() {
     ]).then(([gsap, ScrollTrigger]) => {
       gsap.registerPlugin(ScrollTrigger);
       ctx = gsap.context(() => {
+        // Global page-wide scroll progress. Written once per frame so bridges
+        // can read a single source of truth instead of each computing their own.
+        ScrollTrigger.create({
+          trigger: document.body,
+          start: 'top top',
+          end: 'bottom bottom',
+          scrub: 0,
+          onUpdate: (self) => {
+            pageFlow.pageProgress = self.progress;
+          },
+        });
+
         gsap.utils.toArray<HTMLElement>('.hoa-section-label').forEach((el) => {
           gsap.fromTo(
             el,
@@ -344,7 +357,7 @@ export default function Homepage() {
         }}
       >
         <ClientOnly>
-          <Suspense fallback={<section style={{height: '800vh'}} />}>
+          <Suspense fallback={<section style={{height: '550vh'}} />}>
             <LookbookSection />
           </Suspense>
         </ClientOnly>
@@ -355,7 +368,7 @@ export default function Homepage() {
         style={{
           position: 'relative',
           zIndex: 1,
-          margin: '-120vh -1rem 0',
+          margin: '0 -1rem',
         }}
       >
         <ClientOnly>

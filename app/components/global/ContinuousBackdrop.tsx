@@ -32,16 +32,14 @@ function smoothstep(edge0: number, edge1: number, x: number) {
 // ---------- zone envelopes: which motifs are present at which scroll range ---
 // Overlapping windows are intentional; they crossfade into each other.
 function constellationWeight(sp: number) {
-  // Hero tail through Bestsellers into Categories (sp ~0.15 - 0.64)
-  return smoothstep(0.15, 0.26, sp) * (1 - smoothstep(0.55, 0.64, sp));
+  // Widened: two motifs always co-visible at every seam.
+  return smoothstep(0.08, 0.22, sp) * (1 - smoothstep(0.50, 0.66, sp));
 }
 function mistWeight(sp: number) {
-  // Categories tail through Why (sp ~0.38 - 0.74)
-  return smoothstep(0.38, 0.50, sp) * (1 - smoothstep(0.64, 0.74, sp));
+  return smoothstep(0.32, 0.50, sp) * (1 - smoothstep(0.68, 0.80, sp));
 }
 function auroraWeight(sp: number) {
-  // Why tail through Campaign and Lookbook (sp ~0.55 - 0.98)
-  return smoothstep(0.55, 0.66, sp) * (1 - smoothstep(0.90, 0.98, sp));
+  return smoothstep(0.50, 0.66, sp) * (1 - smoothstep(0.92, 1.00, sp));
 }
 
 // ---------- data shapes -------------------------------------------------------
@@ -67,26 +65,55 @@ type MBlob = {
   color: string;
 };
 
+// Ember: always-on Lissajous radial blobs; weight=1.0 at every sp.
+// Keeps the backdrop alive during motif lulls.
+type Ember = {
+  fx: number;
+  fy: number;
+  ax: number;
+  ay: number;
+  fxFreq: number;
+  fyFreq: number;
+  phase: number;
+  baseR: number;
+  color: string;
+  alpha: number;
+};
+
 // ---------- motif palettes (AT blue family) -----------------------------------
 const DESKTOP_RIBBONS: Ribbon[] = [
-  {yFrac: 0.26, freq: 2.3, phase: 0.0, amp: 0.13, alpha: 0.36, color: '96,128,224', speed: 0.7},
-  {yFrac: 0.44, freq: 1.7, phase: 1.4, amp: 0.15, alpha: 0.30, color: '138,176,208', speed: 1.0},
-  {yFrac: 0.62, freq: 2.9, phase: 2.6, amp: 0.11, alpha: 0.34, color: '156,165,255', speed: 0.85},
-  {yFrac: 0.78, freq: 2.1, phase: 3.9, amp: 0.12, alpha: 0.28, color: '108,148,232', speed: 0.9},
+  {yFrac: 0.26, freq: 2.3, phase: 0.0, amp: 0.13, alpha: 0.14, color: '90,95,108', speed: 0.7},
+  {yFrac: 0.44, freq: 1.7, phase: 1.4, amp: 0.15, alpha: 0.12, color: '100,105,118', speed: 1.0},
+  {yFrac: 0.62, freq: 2.9, phase: 2.6, amp: 0.11, alpha: 0.14, color: '110,115,130', speed: 0.85},
+  {yFrac: 0.78, freq: 2.1, phase: 3.9, amp: 0.12, alpha: 0.11, color: '85,90,105',  speed: 0.9},
 ];
 const MOBILE_RIBBONS: Ribbon[] = [
-  {yFrac: 0.32, freq: 2.0, phase: 0.0, amp: 0.13, alpha: 0.36, color: '96,128,224', speed: 0.8},
-  {yFrac: 0.58, freq: 2.4, phase: 1.7, amp: 0.12, alpha: 0.32, color: '156,165,255', speed: 0.9},
+  {yFrac: 0.32, freq: 2.0, phase: 0.0, amp: 0.13, alpha: 0.14, color: '90,95,108', speed: 0.8},
+  {yFrac: 0.58, freq: 2.4, phase: 1.7, amp: 0.12, alpha: 0.13, color: '110,115,130', speed: 0.9},
 ];
 
 const DESKTOP_MIST: MBlob[] = [
-  {fx: 0.30, fy: 0.40, ax: 0.18, ay: 0.22, phase: 0.0, baseR: 0.34, color: '140,170,240'},
-  {fx: 0.70, fy: 0.55, ax: 0.22, ay: 0.18, phase: 1.7, baseR: 0.38, color: '138,176,208'},
-  {fx: 0.50, fy: 0.25, ax: 0.28, ay: 0.16, phase: 3.1, baseR: 0.26, color: '156,165,255'},
+  {fx: 0.30, fy: 0.40, ax: 0.18, ay: 0.22, phase: 0.0, baseR: 0.34, color: '110,115,130'},
+  {fx: 0.70, fy: 0.55, ax: 0.22, ay: 0.18, phase: 1.7, baseR: 0.38, color: '100,105,118'},
+  {fx: 0.50, fy: 0.25, ax: 0.28, ay: 0.16, phase: 3.1, baseR: 0.26, color: '120,122,132'},
 ];
 const MOBILE_MIST: MBlob[] = [
-  {fx: 0.35, fy: 0.45, ax: 0.22, ay: 0.22, phase: 0.0, baseR: 0.42, color: '140,170,240'},
-  {fx: 0.65, fy: 0.55, ax: 0.22, ay: 0.22, phase: 2.2, baseR: 0.40, color: '138,176,208'},
+  {fx: 0.35, fy: 0.45, ax: 0.22, ay: 0.22, phase: 0.0, baseR: 0.42, color: '110,115,130'},
+  {fx: 0.65, fy: 0.55, ax: 0.22, ay: 0.22, phase: 2.2, baseR: 0.40, color: '100,105,118'},
+];
+
+const DESKTOP_EMBERS: Ember[] = [
+  {fx: 0.18, fy: 0.28, ax: 0.12, ay: 0.18, fxFreq: 0.22, fyFreq: 0.31, phase: 0.0, baseR: 0.46, color: '90,95,108',   alpha: 0.035},
+  {fx: 0.82, fy: 0.24, ax: 0.14, ay: 0.14, fxFreq: 0.28, fyFreq: 0.19, phase: 1.7, baseR: 0.52, color: '110,115,130', alpha: 0.030},
+  {fx: 0.50, fy: 0.66, ax: 0.18, ay: 0.12, fxFreq: 0.17, fyFreq: 0.26, phase: 3.1, baseR: 0.60, color: '85,90,105',   alpha: 0.035},
+  {fx: 0.30, fy: 0.82, ax: 0.16, ay: 0.10, fxFreq: 0.33, fyFreq: 0.21, phase: 4.5, baseR: 0.42, color: '120,122,132', alpha: 0.028},
+  {fx: 0.72, fy: 0.74, ax: 0.12, ay: 0.16, fxFreq: 0.19, fyFreq: 0.29, phase: 5.8, baseR: 0.48, color: '100,105,118', alpha: 0.026},
+  {fx: 0.10, fy: 0.56, ax: 0.14, ay: 0.14, fxFreq: 0.24, fyFreq: 0.18, phase: 0.9, baseR: 0.38, color: '110,115,130', alpha: 0.024},
+];
+const MOBILE_EMBERS: Ember[] = [
+  {fx: 0.25, fy: 0.30, ax: 0.18, ay: 0.18, fxFreq: 0.22, fyFreq: 0.29, phase: 0.0, baseR: 0.60, color: '90,95,108',   alpha: 0.035},
+  {fx: 0.70, fy: 0.70, ax: 0.18, ay: 0.18, fxFreq: 0.26, fyFreq: 0.19, phase: 2.4, baseR: 0.56, color: '120,122,132', alpha: 0.030},
+  {fx: 0.50, fy: 0.48, ax: 0.14, ay: 0.14, fxFreq: 0.18, fyFreq: 0.27, phase: 4.1, baseR: 0.48, color: '110,115,130', alpha: 0.026},
 ];
 
 const DESKTOP_NODE_COUNT = 60;
@@ -111,6 +138,7 @@ export default function ContinuousBackdrop() {
 
     const ribbons = isMobile ? MOBILE_RIBBONS : DESKTOP_RIBBONS;
     const mist = isMobile ? MOBILE_MIST : DESKTOP_MIST;
+    const embers = isMobile ? MOBILE_EMBERS : DESKTOP_EMBERS;
     const nodeCount = isMobile ? MOBILE_NODE_COUNT : DESKTOP_NODE_COUNT;
 
     const nodes: CNode[] = [];
@@ -202,7 +230,7 @@ export default function ContinuousBackdrop() {
       }
       for (let i = 0; i < drawn.length; i++) {
         const p = drawn[i];
-        const dotAlpha = (0.55 + 0.25 * sp) * weight;
+        const dotAlpha = (0.48 + 0.22 * sp) * weight;
         ctx.fillStyle = `rgba(156,165,255,${dotAlpha.toFixed(3)})`;
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
@@ -214,9 +242,8 @@ export default function ContinuousBackdrop() {
     // ---------- motif: mist ----------
     function drawMist(sp: number, weight: number) {
       if (weight < 0.004 || !ctx) return;
-      // Local phase: remap global sp across the mist window to a 0..1 drive.
-      const local = Math.max(0, Math.min(1, (sp - 0.45) / 0.23));
-      const t = local * 6.28;
+      // Phase driver pulls from global sp directly -- no motif snap-back on back-scroll.
+      const t = sp * 6.28 * 1.1;
       const rScale = Math.min(width, height);
       ctx.globalCompositeOperation = 'lighter';
       for (let i = 0; i < mist.length; i++) {
@@ -227,7 +254,7 @@ export default function ContinuousBackdrop() {
         const radius =
           rScale * (b.baseR + 0.08 * Math.sin(t * 0.8 + b.phase));
         const coreAlpha =
-          (0.12 + 0.06 * Math.sin(t * 0.5 + b.phase)) * weight;
+          (0.10 + 0.05 * Math.sin(t * 0.5 + b.phase)) * weight;
         const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
         g.addColorStop(0, `rgba(${b.color},${coreAlpha.toFixed(3)})`);
         g.addColorStop(
@@ -292,10 +319,45 @@ export default function ContinuousBackdrop() {
       ctx.globalCompositeOperation = 'source-over';
     }
 
+    // ---------- motif: ember (always-on through-line layer) ----------
+    function drawEmber(sp: number) {
+      if (!ctx) return;
+      // Drive from global sp so blobs evolve continuously across full page.
+      const t = sp * 6.28;
+      const rScale = Math.min(width, height);
+      ctx.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < embers.length; i++) {
+        const e = embers[i];
+        const cx =
+          width *
+          (e.fx + e.ax * Math.sin(t * e.fxFreq + e.phase));
+        const cy =
+          height *
+          (e.fy + e.ay * Math.cos(t * e.fyFreq + e.phase * 1.3));
+        const radius =
+          rScale * (e.baseR + 0.06 * Math.sin(t * 0.33 + e.phase));
+        const coreAlpha =
+          e.alpha * (0.82 + 0.18 * Math.sin(t * 0.27 + e.phase));
+        const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+        g.addColorStop(0, `rgba(${e.color},${coreAlpha.toFixed(3)})`);
+        g.addColorStop(
+          0.55,
+          `rgba(${e.color},${(coreAlpha * 0.30).toFixed(3)})`,
+        );
+        g.addColorStop(1, `rgba(${e.color},0)`);
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalCompositeOperation = 'source-over';
+    }
+
     // ---------- footer floor handoff (black rise at page tail) ----------
     function updateFloor(sp: number) {
       if (!floorRef.current) return;
-      const rise = smoothstep(0.88, 1.0, sp);
+      // Start earlier (0.82) so floor rises as aurora decays -- glues Lookbook to Testimonials.
+      const rise = smoothstep(0.82, 1.0, sp);
       floorRef.current.style.opacity = rise.toFixed(3);
       floorRef.current.style.backgroundPosition = `0% ${(
         100 -
@@ -309,9 +371,9 @@ export default function ContinuousBackdrop() {
       const sp = getScrollProgress();
       ctx.clearRect(0, 0, width, height);
 
+      drawEmber(sp);
       drawConstellation(sp, constellationWeight(sp));
       drawMist(sp, mistWeight(sp));
-      drawAurora(sp, auroraWeight(sp));
       updateFloor(sp);
     }
 

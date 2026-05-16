@@ -15,10 +15,14 @@ if (typeof window !== 'undefined') {
 function StillLogoMesh() {
   const {scene} = useGLTF('/models/Logo_element.glb', '/draco/');
   const groupRef = useRef<THREE.Group>(null!);
+  const meshesRef = useRef<THREE.Mesh[]>([]);
+  const pointerTarget = useRef({x: 0, y: 0});
+  const pointerLerp = useRef({x: 0, y: 0});
 
   useEffect(() => {
     scene.rotation.set(-Math.PI / 2 + Math.PI, 0, Math.PI + Math.PI);
 
+    const collected: THREE.Mesh[] = [];
     scene.traverse((child: any) => {
       if (!child.isMesh) return;
       child.material = new THREE.MeshPhysicalMaterial({
@@ -34,7 +38,9 @@ function StillLogoMesh() {
         transparent: true,
         opacity: 1,
       });
+      collected.push(child as THREE.Mesh);
     });
+    meshesRef.current = collected;
 
     const meshes: THREE.Mesh[] = [];
     scene.traverse((child: any) => {
@@ -55,6 +61,15 @@ function StillLogoMesh() {
 
   const smoothProgress = useRef(0);
 
+  useEffect(() => {
+    const onMove = (e: PointerEvent) => {
+      pointerTarget.current.x = (e.clientX / window.innerWidth) * 2 - 1;
+      pointerTarget.current.y = (e.clientY / window.innerHeight) * 2 - 1;
+    };
+    window.addEventListener('pointermove', onMove);
+    return () => window.removeEventListener('pointermove', onMove);
+  }, []);
+
   const logCountRef = useRef(0);
   useFrame((state) => {
     if (!groupRef.current) return;
@@ -69,14 +84,29 @@ function StillLogoMesh() {
     smoothProgress.current = THREE.MathUtils.lerp(smoothProgress.current, sp, 0.06);
     const p = smoothProgress.current;
 
+    pointerLerp.current.x = THREE.MathUtils.lerp(pointerLerp.current.x, pointerTarget.current.x, 0.06);
+    pointerLerp.current.y = THREE.MathUtils.lerp(pointerLerp.current.y, pointerTarget.current.y, 0.06);
+
+    const parallaxY = pointerLerp.current.x * 0.18;
+    const parallaxX = pointerLerp.current.y * 0.12;
+
     const tiltX = Math.sin(p * Math.PI) * 0.15;
     const tiltY = Math.sin(p * Math.PI * 2) * 0.12;
-    groupRef.current.rotation.x = tiltX;
-    groupRef.current.rotation.y = tiltY;
+    groupRef.current.rotation.x = tiltX + parallaxX;
+    groupRef.current.rotation.y = tiltY + parallaxY;
+
+    const bob = Math.sin(t * 0.7) * 0.04;
+    groupRef.current.position.y = 0.05 + bob;
 
     const breathe = 1.0 + Math.sin(t * 0.35) * 0.01;
     const scrollScale = 1.0 + Math.sin(p * Math.PI) * 0.08;
     groupRef.current.scale.setScalar(1.22 * breathe * scrollScale);
+
+    const shimmer = 0.8 + Math.sin(t * 0.6) * 0.18;
+    for (const m of meshesRef.current) {
+      const mat = m.material as THREE.MeshPhysicalMaterial;
+      if (mat) mat.envMapIntensity = shimmer;
+    }
   });
 
   return (

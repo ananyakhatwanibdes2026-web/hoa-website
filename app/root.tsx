@@ -8,6 +8,7 @@ import {
   Meta,
   Scripts,
   ScrollRestoration,
+  useLocation,
   useRouteLoaderData,
 } from 'react-router';
 import {lazy, Suspense, useState, useEffect} from 'react';
@@ -161,6 +162,8 @@ function loadDeferredData({context}: Route.LoaderArgs) {
 
 export function Layout({children}: {children?: React.ReactNode}) {
   const nonce = useNonce();
+  const location = useLocation();
+  const isHome = location.pathname === '/';
 
   return (
     <html lang="en">
@@ -188,16 +191,18 @@ export function Layout({children}: {children?: React.ReactNode}) {
       </head>
       <body>
         <RouteTransition />
-        <GlobalEffects />
+        {isHome && <GlobalEffects />}
         <Navigation />
         <SideRail />
-        <AmbientTicker />
-        <CornerTicker />
-        <ClientOnly>
-          <Suspense fallback={null}>
-            <SceneCanvas />
-          </Suspense>
-        </ClientOnly>
+        {isHome && <AmbientTicker />}
+        {isHome && <CornerTicker />}
+        {isHome && (
+          <ClientOnly>
+            <Suspense fallback={null}>
+              <SceneCanvas />
+            </Suspense>
+          </ClientOnly>
+        )}
         {children}
         <ScrollRestoration nonce={nonce} />
         <Scripts nonce={nonce} />

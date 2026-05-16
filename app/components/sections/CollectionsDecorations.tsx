@@ -98,11 +98,11 @@ export function IceDust({ isMobile }: { isMobile: boolean }) {
       // 70% silver-blue, 20% cobalt, 10% ice white
       const r = Math.random();
       if (r < 0.70) {
-        col[i * 3] = 0.78; col[i * 3 + 1] = 0.85; col[i * 3 + 2] = 0.97; // #c8d8f8 silver-blue
+        col[i * 3] = 0.82; col[i * 3 + 1] = 0.83; col[i * 3 + 2] = 0.86; // silver
       } else if (r < 0.90) {
-        col[i * 3] = 0.38; col[i * 3 + 1] = 0.50; col[i * 3 + 2] = 0.75; // #6080c0 cobalt
+        col[i * 3] = 0.29; col[i * 3 + 1] = 0.30; col[i * 3 + 2] = 0.35; // slate
       } else {
-        col[i * 3] = 0.91; col[i * 3 + 1] = 0.96; col[i * 3 + 2] = 1.00; // #e8f4ff ice white
+        col[i * 3] = 0.92; col[i * 3 + 1] = 0.93; col[i * 3 + 2] = 0.95; // off-white
       }
     }
     const geo = new THREE.BufferGeometry();
@@ -163,9 +163,9 @@ function createPolygonGeo(sides: number, radius: number): THREE.BufferGeometry {
 }
 
 const COL_RING_CONFIGS = [
-  { sides: 6, radius: 3.2, z: -4,  speed:  0.004, rotZ:  0.20, phase: 0.0, maxOp: 0.32, color: '#a0b8e8' },
-  { sides: 4, radius: 5.8, z: -8,  speed: -0.003, rotZ: -0.10, phase: 0.6, maxOp: 0.18, color: '#8098d0' },
-  { sides: 6, radius: 9.5, z: -13, speed:  0.002, rotZ:  0.05, phase: 1.2, maxOp: 0.10, color: '#6080c0' },
+  { sides: 6, radius: 3.2, z: -4,  speed:  0.004, rotZ:  0.20, phase: 0.0, maxOp: 0.32, color: '#8a8e9a' },
+  { sides: 4, radius: 5.8, z: -8,  speed: -0.003, rotZ: -0.10, phase: 0.6, maxOp: 0.18, color: '#6c7080' },
+  { sides: 6, radius: 9.5, z: -13, speed:  0.002, rotZ:  0.05, phase: 1.2, maxOp: 0.10, color: '#4a4e5a' },
 ];
 
 function CRing({ config }: { config: typeof COL_RING_CONFIGS[0] }) {

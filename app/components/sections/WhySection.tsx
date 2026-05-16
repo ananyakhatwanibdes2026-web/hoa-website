@@ -6,8 +6,14 @@ import {AboutStillLogo} from './AboutStillLogo';
 
 gsap.registerPlugin(ScrollTrigger);
 
+function smoothstep(edge0: number, edge1: number, x: number) {
+  const t = Math.min(1, Math.max(0, (x - edge0) / (edge1 - edge0)));
+  return t * t * (3 - 2 * t);
+}
+
 export default function WhySection() {
   const sectionRef = useRef<HTMLElement>(null);
+  const stickyRef = useRef<HTMLDivElement>(null);
   const leftRef = useRef<HTMLDivElement>(null);
   const rightRef = useRef<HTMLDivElement>(null);
   const wordsRef = useRef<(HTMLDivElement | null)[]>([]);
@@ -74,7 +80,8 @@ export default function WhySection() {
         animation: tl,
       });
 
-      // Section awareness for SceneCanvas logo fade
+      // Section awareness for SceneCanvas logo fade + sticky-inner crossfade outro.
+      // Outro fade creates a virtual overlap with Campaign (which has no DOM margin overlap).
       ScrollTrigger.create({
         trigger: section,
         start: 'top top',
@@ -85,6 +92,12 @@ export default function WhySection() {
         },
         onUpdate: (self) => {
           whySectionState.sectionProgress = self.progress;
+          if (stickyRef.current) {
+            const sp = self.progress;
+            // Hold until 0.85, then ease out to 0 so Campaign can cross-fade in.
+            const op = 1 - smoothstep(0.85, 1.0, sp);
+            stickyRef.current.style.opacity = op.toFixed(3);
+          }
         },
       });
     }, section);
@@ -106,6 +119,7 @@ export default function WhySection() {
     >
       {/* Sticky inner viewport -- stays pinned while outer 250vh scrolls */}
       <div
+        ref={stickyRef}
         style={{
           position: 'sticky',
           top: 0,

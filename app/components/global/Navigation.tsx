@@ -327,7 +327,7 @@ function FullScreenMenu({
             textDecoration: 'none',
             padding: '0.3rem 0',
             opacity: open ? 1 : 0,
-            transform: open ? 'translateX(0)' : 'translateX(-28px)',
+            transform: open ? 'translateY(0)' : 'translateY(24px)',
             transition: `opacity 0.55s ease ${i * 0.07 + 0.06}s, transform 0.55s ease ${i * 0.07 + 0.06}s`,
           }}
         >

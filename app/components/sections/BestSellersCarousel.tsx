@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Environment, Lightformer, useGLTF, useTexture } from '@react-three/drei';
 import { Selection, Select } from '@react-three/postprocessing';
 import * as THREE from 'three';
@@ -8,7 +8,7 @@ import { bestsellersSectionState } from '~/lib/sceneState';
 import gsap from 'gsap';
 
 if (typeof window !== 'undefined') {
-  useGLTF.preload('/models/Spiral.glb', '/draco/');
+  useGLTF.preload('/spiral%20new.glb', '/draco/');
 }
 
 
@@ -208,7 +208,7 @@ function CarouselCard({ index, texture, rotStateRef, scaleRef, onCardClick }: Ca
   const glowMaterial = useMemo(() => {
     const haloAlpha = makeHaloAlphaTexture();
     return new THREE.MeshBasicMaterial({
-      color: new THREE.Color('#5878e0'),
+      color: new THREE.Color('#3a3f52'),
       alphaMap: haloAlpha,
       transparent: true,
       opacity: 0,
@@ -298,10 +298,50 @@ function CarouselCard({ index, texture, rotStateRef, scaleRef, onCardClick }: Ca
 // ---------------------------------------------------------------------------
 // Spiral background decor
 // ---------------------------------------------------------------------------
+function useNeutralChromeEnvMap() {
+  const gl = useThree((s) => s.gl);
+  return useMemo(() => {
+    const rt = new THREE.WebGLCubeRenderTarget(256, {
+      generateMipmaps: true,
+      minFilter: THREE.LinearMipmapLinearFilter,
+      format: THREE.RGBAFormat,
+      type: THREE.HalfFloatType,
+    });
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color('#101012');
+    const panel = (
+      w: number, h: number,
+      pos: [number, number, number], rot: [number, number, number],
+      hex: string, intensity: number,
+    ) => {
+      const mat = new THREE.MeshBasicMaterial({
+        color: new THREE.Color(hex).multiplyScalar(intensity),
+        side: THREE.DoubleSide,
+        toneMapped: false,
+      });
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat);
+      m.position.set(...pos);
+      m.rotation.set(...rot);
+      scene.add(m);
+    };
+    panel(6, 2.4, [0, 3.2, 0], [Math.PI / 2, 0, 0], '#ffffff', 2.0);
+    panel(3.8, 5, [-3.8, 0, 1.2], [0, Math.PI / 2, 0], '#f0f1f4', 1.4);
+    panel(3.8, 5, [3.8, 0, 1.2], [0, -Math.PI / 2, 0], '#f0f1f4', 1.2);
+    panel(5, 3, [0, 0.2, 4.2], [0, 0, 0], '#e6e7ea', 0.9);
+    panel(5, 3, [0, 0.2, -4.2], [0, Math.PI, 0], '#cfd0d3', 0.6);
+    panel(6, 6, [0, -3.2, 0], [-Math.PI / 2, 0, 0], '#2a2b2e', 0.4);
+    const cam = new THREE.CubeCamera(0.1, 50, rt);
+    scene.add(cam);
+    cam.update(gl, scene);
+    return rt.texture;
+  }, [gl]);
+}
+
 function SpiralDecor({ position = [0, 0, -4] as [number, number, number], rotStateRef, phaseOffset = 0 }: { position?: [number, number, number]; rotStateRef: React.MutableRefObject<{ angle: number }>; phaseOffset?: number }) {
-  const { scene: gltfScene } = useGLTF('/models/Spiral.glb', '/draco/');
+  const { scene: gltfScene } = useGLTF('/spiral%20new.glb', '/draco/');
   const groupRef = useRef<THREE.Group>(null!);
   const spiralOpacityRef = useRef(0);
+  const neutralEnv = useNeutralChromeEnvMap();
 
   // Do all setup in useMemo — runs synchronously during render before the scene
   // is attached to the R3F scenegraph, so Box3 sees NO parent transforms.
@@ -326,20 +366,21 @@ function SpiralDecor({ position = [0, 0, -4] as [number, number, number], rotSta
 
     // Scale so the largest dimension is ~14 Three.js units
     const maxDim = Math.max(size.x, size.y, size.z);
-    if (maxDim > 0) s.scale.setScalar(14 / maxDim);
+    if (size.y > 0) s.scale.setScalar(20 / size.y);
 
     const meshList: THREE.Mesh[] = [];
     s.traverse((child: any) => {
       if (!child.isMesh) return;
       child.material = new THREE.MeshPhysicalMaterial({
-        color: new THREE.Color('#5868c8'),      // deep blue-violet — iridescent premium
-        metalness: 0.98,
-        roughness: 0.04,                        // near-mirror — catches lightformers sharply
-        envMapIntensity: 3.5,                   // picks up sapphire backlight + overhead strongly
-        emissive: new THREE.Color('#1828a0'),   // inner blue glow
-        emissiveIntensity: 0.18,
-        clearcoat: 1.0,
-        clearcoatRoughness: 0.02,
+        color: new THREE.Color('#dadcdf'),      // mirror silver, neutral env
+        metalness: 1.0,
+        roughness: 0.16,
+        envMap: neutralEnv,
+        envMapIntensity: 1.0,
+        emissive: new THREE.Color('#1a1c20'),
+        emissiveIntensity: 0.2,
+        clearcoat: 0.6,
+        clearcoatRoughness: 0.08,
         transparent: true,
         opacity: 0, // start invisible, driven by useFrame entrance
         side: THREE.DoubleSide,
@@ -349,7 +390,7 @@ function SpiralDecor({ position = [0, 0, -4] as [number, number, number], rotSta
     });
 
     return { scene: s, meshes: meshList };
-  }, [gltfScene]);
+  }, [gltfScene, neutralEnv]);
 
   useFrame(() => {
     if (!groupRef.current) return;
@@ -408,8 +449,7 @@ function CarouselScene({ rotStateRef, cardScaleRefs, hoverRef, animatingRef, onC
       <BSAtmosphericRings />
       <BSDriftParticles isMobile={isMobile} />
 
-      <SpiralDecor position={[0, 7, -4]} rotStateRef={rotStateRef} phaseOffset={0} />
-      <SpiralDecor position={[0, -7, -4]} rotStateRef={rotStateRef} phaseOffset={Math.PI} />
+      <SpiralDecor position={[0, -1.5, -4]} rotStateRef={rotStateRef} phaseOffset={0} />
 
       {/* Edge orbs: glow spheres at scene corners */}
       <BSFloatingOrbs />

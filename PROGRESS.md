@@ -1,5 +1,169 @@
 # HOUSE OF AN -- Progress Log
 
+## Session: 2026-04-22 (Motion unification + palette shift)
+
+User goal 1: all fades/transitions move in one direction across the site, bottom→up, so the page reads as one continuous upward lift.
+
+Audit surfaced 5 direction breakers. Fixed 3, kept 2 by design.
+
+**Fixed:**
+1. [TestimonialsFooterSection.tsx:110](app/components/sections/TestimonialsFooterSection.tsx#L110) — subtext entered `x:36→0`. Now `y:32→0`.
+2. [CategoriesSection.tsx:51-79](app/components/sections/CategoriesSection.tsx#L51-L79) — card entrance dropped `x:±100` sideways arc, all three cards now rise pure `y:80→0`. Exits unified to `y:-220` (was `x:±300, y:-40` for Edge/Elite).
+3. [Navigation.tsx:330](app/components/global/Navigation.tsx#L330) — fullscreen menu items `translateX(-28)` → `translateY(24)`.
+
+**Kept (product semantics):**
+- Lookbook horizontal carousel — X-stride is the pagination.
+- Aside cart/search/menu — right-edge slide is the sidebar pattern; bottom-sheet would change the product type.
+
+**Shared tokens:** new [app/lib/motion.ts](app/lib/motion.ts) exports `RISE` (y:48), `RISE_MD` (y:32), `RISE_SM` (y:20), `LIFT_OUT` (y:-32 exit), `LIFT_OUT_FAR` (y:-220 exit). Future sections should import rather than redeclare magic numbers.
+
+**Route lift skipped** — would conflict with ScrollTrigger measurements on home page; opacity curtain already unifies route feel.
+
+---
+
+User goal 2: reduce blues, enhance blacks. Site should feel near-black with only faint slate tint, but keep periwinkle UI accent alive.
+
+Audit found 9 blue-emitting systems across WebGL shader, Three.js lights/materials, Canvas2D backdrops, and UI tokens. Strategy: desaturate + lower opacity + deepen blacks, don't delete — nuking would kill atmosphere.
+
+**Changes:**
+- [SceneCanvas.tsx:128-130,136](app/components/global/SceneCanvas.tsx#L128-L136) — NightSkyShader `colBlue vec3(0.08,0.20,0.62)` → `vec3(0.05,0.06,0.12)`, `colAurora` → `vec3(0.015,0.020,0.045)`, `colDark` → `vec3(0.0,0.0,0.008)`. Alpha ceiling 0.86 → 0.62.
+- [SceneCanvas.tsx:499,512,522-525](app/components/global/SceneCanvas.tsx#L499) — Lightformers: left softbox `#b0ccff`→`#cfd4dc`, front fill `#c0ccf0`→`#d4d4dc`, sapphire backlight `#1a50c8`→`#1c2238` and intensity 3.5 → 1.8. Chrome logo now reflects silver, not periwinkle.
+- [SceneCanvas.tsx:606-610](app/components/global/SceneCanvas.tsx#L606) — 5 foreground stars shifted from `#b0cce8/#a0c4fc/#b8d0f0/#c8e0ff/#aacaf4` → silver/near-neutral range. Mid/background stars untouched (already ~neutral).
+- [SceneCanvas.tsx:797,801](app/components/global/SceneCanvas.tsx#L797) — rock diffuse `#88acd0`→`#58606a`, emissive `#1a3870`→`#14171f`.
+- [BestSellersDecorations.tsx:154-160,200](app/components/sections/BestSellersDecorations.tsx#L154) — 7 orbs shifted from `#2030c0`-`#4870c8` range to `#181a22`-`#2a2e3a` slate range; peak opacity 0.82 → 0.55. Drift particles mix `#8ab0f0/#9ca5ff` → silver/faint-periwinkle. Ring `#5868a8` → `#3a3f4e`.
+- [BestSellersCarousel.tsx:211](app/components/sections/BestSellersCarousel.tsx#L211) — center halo `#5878e0` → `#3a3f52`.
+- [ContinuousBackdrop.tsx:84-117](app/components/global/ContinuousBackdrop.tsx#L84-L117) — all ribbon/mist/ember rgb swapped to slate family (`90,95,108` / `110,115,130` / `120,122,132`). Ribbon alpha halved (0.30→0.14 etc.). Ember alpha halved (0.075→0.035 etc.) so blacks read through on empty scroll.
+- [ParticleField.tsx:60,156](app/components/global/ParticleField.tsx#L60) — hero particles `#8ab0e8`→`#a8adb8`, PersistentParticleThread `#6080e0`→`#3a3f4e`.
+- [CollectionsDecorations.tsx:100-106,166-168](app/components/sections/CollectionsDecorations.tsx#L100) — particle mix `#c8d8f8/#6080c0/#e8f4ff` → silver/slate/off-white. Rings `#a0b8e8/#8098d0/#6080c0` → `#8a8e9a/#6c7080/#4a4e5a`.
+
+**Deliberately NOT touched:** `--at-accent-bright` (#9ca5ff), `--at-text-glow` (#00e5ff), SideRail inline rgbas, FooterBlock column heading rgbas, Navigation link hover — all UI accent, preserves signature pop.
+
+`npm run typecheck` clean.
+
+---
+
+## Session: 2026-04-21 pt3 (Lookbook scroll debug)
+
+User bug: on desktop, while Campaign Card 3 was focal, Lookbook faded in → disappeared → reappeared already mid-2nd-image. Also footer bled in before image 6. Multiple prior attempts failed.
+
+Root cause: three stacked envelopes (Campaign exit, Lookbook enter, Lookbook exit) + animST starting sp 0.60 compressed all 5 image swaps into the fade-out window, and the `-120vh` footer wrapper margin pulled the footer into Lookbook's tail.
+
+Fixes in [LookbookSection.tsx](app/components/sections/LookbookSection.tsx):
+1. Removed the visual-opacity envelope entirely (user request after iterations). `stateST.onUpdate` now only writes `lookbookSectionState.active / .sectionProgress` for the backdrop. Deleted the local `smoothstep` helper.
+2. Section height `800vh → 920vh` (tried 1400 then 1000 along the way). Suspense fallback in [_index.tsx](app/routes/_index.tsx) updated to match.
+3. animST now `start:'top+=180vh top', end:'bottom bottom'` — 180vh pre-roll holds image 1 static, then the remaining 740vh carries the 5 swaps (~148vh each) all the way to section bottom. No post-roll dead scroll.
+4. Tween ease `'none' → 'power2.inOut'` and `scrub 0.08 → 0.6` so each swap reads as deliberate motion and fast scrolls still feel cinematic.
+
+Fix in [_index.tsx](app/routes/_index.tsx): footer wrapper margin `'-120vh -1rem 0' → '0 -1rem'`. Footer now rises immediately once Lookbook's scroll ends (image 6 at focal).
+
+Net: Lookbook opacity 1 throughout, single 920vh section, 180vh pre-roll + 5×148vh swaps with eased scrub, footer hand-off is hard (no overlap).
+
+## Session: 2026-04-21 pt2 (Logo/Spiral/Lookbook/Backdrop polish)
+
+User feedback drove 4 targeted fixes, no scope creep:
+
+1. **About/Why still-logo looked like old logo**. Fix: [AboutStillLogo.tsx](app/components/sections/AboutStillLogo.tsx) material + env now mirror hero `LogoModel`. Local copy of `useStudioChromeEnvMap` (same 6-panel studio cubemap). Material: `#eef0f2`, metalness 1.0, roughness 0.16, envMap/intensity 1.0, clearcoat 0, no emissive. Dropped `<Environment>` + four `<Lightformer>`s (cubemap drives reflections). Single file covers both sections via shared import.
+
+2. **Lookbook side images too big**. Fix: [LookbookSection.tsx](app/components/sections/LookbookSection.tsx) `offsetScale` side tiers 0.65/0.50/0.38 → 0.48/0.34/0.24. Focal (offset 0) untouched at 1.0.
+
+3. **Campaign + Lookbook wavy backdrop removal**. Fix: [ContinuousBackdrop.tsx](app/components/global/ContinuousBackdrop.tsx) `draw()` no longer calls `drawAurora`. Ember + constellation + mist + floor still run. Aurora draw fn kept for future re-enable.
+
+4. **Spiral swap + visual fixes**. Progression:
+   - Material: deep blue iridescent (`#5868c8`, emissive `#1828a0`, envMapIntensity 3.5, clearcoat 1.0) → polished silver (`#e6e8ec`, roughness 0.14, envMapIntensity 2.0, no emissive/clearcoat).
+   - Asset: `/models/Spiral.glb` → `/spiral%20new.glb` (URL-encoded; file at `public/spiral new.glb`).
+   - Geometry: two instances at `[0,±7,-4]` → single instance at `[0,0,-4]` (user: "keep only 1 new spiral in middle top to bottom").
+   - Scale: `14 / maxDim` → `26 / size.y` so Y-axis drives coverage regardless of bbox aspect. Fills viewport top-to-bottom.
+
+Files touched: 4 .tsx (`AboutStillLogo`, `LookbookSection`, `ContinuousBackdrop`, `BestSellersCarousel`). Docs synced in CLAUDE.md, TODO.md, PROGRESS.md, ROADMAP.md.
+
+## Session: 2026-04-21 (Hero Wordmark Remake)
+
+User: "I need the remake of the style 'house of an' on the hero section which just scrolls off. lets give the name and intro on the hero page. So 'House' appears then 'Of' then 'AN' on scroll. Should look eye catching." Iterated: stacked build-up style, then "just 'house of an' in a proper manner" (no separate name/intro copy), then moved stack below logo, then dropped AN so "HOUSE / OF" reads above the 3D AN_Logo which completes the wordmark.
+
+### HeroSection.tsx rebuilt [COMPLETE]
+- Outer `<section>` 300vh (was 270vh). Sticky inner 100vh replaces the old absolute-positioned overlay.
+- 2 `<span>`s: HOUSE, OF — flex column, gap 0.18em, `alignItems:flex-start` + `paddingTop:10vh` so stack sits upper viewport above the centered SceneCanvas AN_Logo.
+- GSAP paused timeline driven by `ScrollTrigger start:'top top', end:'bottom bottom', scrub:0.2, invalidateOnRefresh:true`. Initial state: `opacity:0, y:48, clipPath:'inset(0 0 100% 0)', letterSpacing:'0.3em', paddingLeft:'0.3em'`. `reveal()` tweens to `opacity:1, y:0, clipPath:'inset(0 0 0% 0)', letterSpacing:'0.65em', paddingLeft:'0.65em'` (paddingLeft matches letterSpacing for optical centering). HOUSE at t=0, OF at t=0.45, duration 0.28 each `power2.out`. Rule + chevron fade in at t=0.82.
+- Typography upscaled: `clamp(2.6rem, 9vw, 9rem)` (was `clamp(2.2rem, 6.5vw, 6rem)`) — more presence. Drop-shadow glow boosted to `0 0 28px rgba(255,255,255,0.22)`.
+- Removed: old single-line static H1, `heroFloat` infinite translateY bob keyframe (scroll drives motion now), 0.5s delay fade-in timeline.
+- Rule anchored `bottom:5%`, chevron `bottom:1.5rem` inside sticky wrapper (were 22%/3rem on absolute overlay).
+- `_index.tsx` unchanged — fallback placeholder still 100vh, `section-hero` wrapper + scrollspy ID preserved. About marginTop:-120vh still overlaps hero tail cleanly.
+
+### Files touched
+- `app/components/sections/HeroSection.tsx` — full rewrite.
+
+## Session: 2026-04-19 pt2 (Continuous Scroll Bridging)
+
+User: "in han on desktop. my main goal was to keep the website scroll look visually consistent from top to end. Now, the pages are looking seperated, i need them in one singular smooth scroll from start to end so it doesnt feel at all that the pages are seperated. how can we do this? my every effort to do this has not worked. brainstorm on this and how we can implement this"
+
+### Root-cause analysis [COMPLETE]
+Four reasons the page was still reading as chaptered despite the unified 2D backdrop, shared aurora, negative-margin overlaps, and `latePageFade` already in place:
+1. **Content pops at the sticky handoff.** Each section's GSAP intro fires fresh when its own ScrollTrigger enters — hero elements sit at opacity 0 until then, so viewer perceives a cut, not a flow.
+2. **Backdrop motifs had narrow cross-bands.** Old envelopes (constellation 0.15-0.64, mist 0.38-0.74, aurora 0.55-0.98) meant only one motif was at peak at most sp values; nothing persistent bridged the aurora-only tail or the pre-constellation head.
+3. **No page-wide through-line.** `ParticleField` (Tier A) unmounts with `heroGone` at sp≈0.30; after that the WebGL layer contributes only the aurora shader.
+4. **Body background is `#000000` with only 2 stops.** BackgroundJourney was visually inert — every motif lull reads as "empty".
+
+### ContinuousBackdrop.tsx -- widened envelopes + ember layer [COMPLETE]
+- Motif envelopes widened so ≥2 motifs co-visible at every seam: constellation `smoothstep(0.08,0.22)*(1-smoothstep(0.50,0.66))`, mist `smoothstep(0.32,0.50)*(1-smoothstep(0.68,0.80))`, aurora `smoothstep(0.50,0.66)*(1-smoothstep(0.92,1.00))`.
+- Base alphas trimmed ~15% to prevent 3-motif mud around sp≈0.55: constellation dot `0.55+0.25*sp → 0.48+0.22*sp`; mist core `0.12+0.06*sin → 0.10+0.05*sin`; aurora ribbon alphas across `DESKTOP_RIBBONS` + `MOBILE_RIBBONS` dropped ~0.04-0.06 per entry.
+- Mist phase driver: switched from local remap `(sp-0.45)/0.23` to global `sp*6.28*1.1` (matches aurora pattern `max(0,(sp-0.55)*4)`). Eliminates snap-back on back-scroll at the boundary.
+- **Ember layer (new)**: added `Ember` type, `DESKTOP_EMBERS` x6 / `MOBILE_EMBERS` x3 constant arrays, `drawEmber(sp)` function. 6 very slow Lissajous radial-gradient blobs, #6080e0→#8caaf4, per-blob alpha 0.05-0.075, **weight 1.0 (always on)**. `drawEmber` runs FIRST each frame (before constellation/mist/aurora) — the "never empty" layer that keeps the backdrop alive during motif lulls. Trivial cost (6 radial fills/frame).
+- Floor-rise start edge `smoothstep(0.88,1.0,sp) → smoothstep(0.82,1.0,sp)` — floor begins rising as aurora decays, not after, to glue Lookbook→Testimonials.
+
+### ParticleField.tsx -- PersistentParticleThread (Tier B) [COMPLETE]
+- New `PersistentParticleThread` exported component below existing `ParticleField`. Separate `THREE.Points` instance.
+- Counts: `TIER_B_DESKTOP=2500`, `TIER_B_MOBILE=800`, `TIER_B_LOW_END=500` (gate: `navigator.hardwareConcurrency <= 4`).
+- Distribution: cylindrical, `Y_RANGE=30` (y:±30 world units), `XZ_RADIUS=18`. Drifts downward with scroll delta (`DRIFT_PER_PAGE=40`). Recycles particles that leave top back to bottom.
+- Material: `size=0.028`, `color="#6080e0"`, `AdditiveBlending`, `depthWrite={false}`, opacity breathes 0.10-0.14. `frustumCulled={false}`.
+- **SceneCanvas.tsx**: imports `PersistentParticleThread` and mounts it OUTSIDE the `heroGone` gate (right after `{!heroGone && <ParticleField />}`, before `<LogoModel />`). Tier A stays gated, Tier B spans hero→footer.
+- Result: the same slow-drifting periwinkle particle field sits behind every section — spatial anchor that makes all sections share one "room".
+
+### pageFlow.pageProgress + envelope widening pass [COMPLETE]
+- `app/lib/sceneState.ts` appends `export const pageFlow = { pageProgress: 0 }`.
+- `_index.tsx` imports `pageFlow` and adds (inside the existing `gsap.context(() => {...})` block) a global body-scoped ScrollTrigger: `trigger: document.body, start: 'top top', end: 'bottom bottom', scrub: 0, onUpdate: (self) => { pageFlow.pageProgress = self.progress; }`. Writes `pageFlow.pageProgress` once per frame; available to any future cross-module bridge without React.
+- **CampaignSection.tsx** envelope: `smoothstep(0,0.08,sp)*(1-smoothstep(0.85,1,sp)) → smoothstep(0,0.22,sp)*(1-smoothstep(0.72,1,sp))`.
+- **LookbookSection.tsx** envelope: `smoothstep(0.15,0.22,sp)*(1-smoothstep(0.92,1,sp)) → smoothstep(0.15,0.37,sp)*(1-smoothstep(0.72,1,sp))`. Kept the 0.15 floor for Campaign-overlap invisibility (the 120vh wrapper margin means sp 0→0.15 is the pure overlap zone).
+- Each crossfade stretches from ~60vh to ~125vh.
+
+### WhySection.tsx -- sticky outro crossfade [COMPLETE]
+- Why→Campaign has **no DOM margin overlap** (Campaign wrapper margin is `0 -1rem`, no negative top — a deliberate fix from 2026-04-17 to stop Campaign bleeding into Why's pin-release zone). So to create a crossfade there, Why must fade itself out visually.
+- Added local `smoothstep` helper at module top.
+- Added `stickyRef = useRef<HTMLDivElement>(null)` and wired it to the `position: sticky` inner div.
+- State-tracking ScrollTrigger's `onUpdate` now also drives the outro:
+```ts
+onUpdate: (self) => {
+  whySectionState.sectionProgress = self.progress;
+  if (stickyRef.current) {
+    const sp = self.progress;
+    const op = 1 - smoothstep(0.85, 1.0, sp);
+    stickyRef.current.style.opacity = op.toFixed(3);
+  }
+}
+```
+- Hold until 0.85 (so content reads normally), then ease to 0 from 0.85→1.0. Campaign's own `smoothstep(0,0.22)` enter ramp overlaps this outro — virtual 15vh crossfade where there used to be a hard cut.
+
+### BackgroundJourney.tsx -- body-bg breath [COMPLETE]
+- Added two sub-perceptible mid-stops:
+```ts
+{pos: 0.000, bg: '#000000', text: '#ffffff'},
+{pos: 0.350, bg: '#040810', text: '#ffffff'},
+{pos: 0.750, bg: '#05080f', text: '#ffffff'},
+{pos: 1.000, bg: '#000000', text: '#ffffff'},
+```
+- ΔE < 2 from pure black — below perceptible threshold as a "color change", but gives the aurora/ember something to land on. DOM body no longer reads as inert empty box during motif lulls.
+
+### Verification [COMPLETE]
+- `npm --prefix /Users/kanav/Desktop/han run typecheck` → `EXIT=0`. All touched files compile clean.
+- **Visual QA NOT performed** — cannot open a browser from this session. User to verify with `npm run dev`, scroll hero→footer checking all section seams, then top↔bottom fast scroll, then DevTools Performance recording. See TODO.md Immediate block.
+
+### Docs synced [COMPLETE]
+- CLAUDE.md: architecture entry added below the existing 2026-04-17 ContinuousBackdrop entry (envelopes, ember, Tier B thread, pageFlow, widened Campaign/Lookbook envelopes, Why sticky outro, BackgroundJourney mid-stops).
+- TODO.md: new "Recently Completed (2026-04-19 pt2)" block + "Immediate (2026-04-19 pt2)" visual QA tasks.
+- ROADMAP.md: new item 43.
+- PROGRESS.md: this entry.
+
+---
+
 ## Session: 2026-04-19 (Scroll-Synced SideRail Nav)
 
 ### SideRail converted to 7-item scrollspy [COMPLETE]
@@ -467,6 +631,21 @@ Root cause of previous session failure: 6 AT components were spec'd but never cr
 **STILL PENDING -- About->Bestsellers gap:**
 - BestSellers wipe `start: 'top bottom+=13%'` was tuned for old 63vh spacer. With 31.5vh spacer, wipe only fires 18.5vh into the spacer and is 14% done when Bestsellers section enters viewport.
 - Fix needed: in `BestSellersSection.tsx` useEffect ~line 180, change `start: 'top bottom+=13%'` to `start: 'top bottom+=31.5%'` to fire at spacer start. Also update visTrigger start to match. Alternatively remove the spacer entirely.
+
+### Session 2026-04-25: Footer cleanup, testimonial hover, lookbook tighten, spiral silver, collections route gating, still-logo idle motion [COMPLETE]
+
+- [x] **FooterBlock minimal redesign** ([app/components/sections/FooterBlock.tsx](app/components/sections/FooterBlock.tsx)): stripped to brand + tagline, 3 socials (IG/Pinterest/Twitter), hairline divider, copyright + 3 policy links. Removed: `FOOTER_LINKS` (Shop/Support/Explore — 15 broken links), newsletter form + state, ghost AN watermark + parallax, dual arc SVG paths + stroke-dashoffset draw-in, all GSAP/ScrollTrigger imports. Centred flex-column layout, max-width 1100px.
+- [x] **TestimonialCard hover-reveal** ([app/components/sections/TestimonialCard.tsx](app/components/sections/TestimonialCard.tsx)): stars/quote/author wrapped with `className="tf-card-content"`. Injected `<style>` block: `.tf-card .tf-card-content { opacity:0; transition: opacity 0.32s ease; } .tf-card:hover .tf-card-content { opacity:1; }`. Card body, shadow, and lift animation untouched.
+- [x] **Lookbook left-side tighten** ([app/components/sections/LookbookSection.tsx](app/components/sections/LookbookSection.tsx)): asymmetric stride — `LEFT_STRIDE = galleryW*0.18` (right `STRIDE=0.32` unchanged). New `offsetX(off)` helper: `FOCAL_SHIFT + (off>=0 ? off*STRIDE : off*LEFT_STRIDE)`. Past-offset opacities raised: `-1: 0.85`, `-2: 0.70`. Side scales lowered: `1→0.42, 2→0.30, default→0.20`. Two past images now stay visible during focal window.
+- [x] **SpiralDecor full silver** ([app/components/sections/BestSellersCarousel.tsx](app/components/sections/BestSellersCarousel.tsx)): material rebuilt to be immune to sapphire Lightformer reflections. `metalness:0`, `envMapIntensity:0`, `clearcoat:0`, color `#c8cacd`, emissive `#9a9da3` @ 0.55, roughness 0.55. Explicit `mat.envMap = null` after construction so the scene's chromatic Lightformers can't paint blue specular highlights. Reads as soft brushed silver in all lighting.
+- [x] **Route-gated globals** ([app/root.tsx](app/root.tsx)): added `useLocation()` import + `isHome = location.pathname === '/'` in `Layout`. `GlobalEffects`, `AmbientTicker`, `CornerTicker`, and the `ClientOnly>Suspense>SceneCanvas` block now render only when `isHome`. RouteTransition + Navigation stay site-wide. SideRail self-gates already. Effect: `/collections/*` and `/products/*` are no longer flooded by 3D/grain/cursor/tickers.
+- [x] **Collection page styles** ([app/styles/app.css](app/styles/app.css)): replaced bare `.collection-description` + `.products-grid` block with full `.collection` page treatment. Wrapper: `padding: clamp(96px,12vh,140px) clamp(20px,4vw,56px) 80px`, `min-height:100vh`, `background:#0a0a0a`. `.collection h1`: Cormorant 300, uppercase, letterSpacing 0.16em. `.collection-description`: DM Sans 0.9rem, `rgba(255,255,255,0.55)`. `.product-item` cards: `#111319`, 1px border `rgba(255,255,255,0.06)`, 6px radius, padding 14px, transition transform/border. Hover: `translateY(-4px)` + border `rgba(148,175,228,0.32)`. `.product-item img` aspect-ratio 4/5 cover.
+- [x] **Still-logo idle motion** ([app/components/sections/AboutStillLogo.tsx](app/components/sections/AboutStillLogo.tsx) + [app/components/sections/WhyStillLogo.tsx](app/components/sections/WhyStillLogo.tsx)): both logos now have ambient interactive motion on top of existing breathing/scroll-driven tilt.
+  - **Pointer parallax**: window `pointermove` listener writes normalised `pointerTarget.{x,y}` to ref. In `useFrame`, lerp `pointerLerp` toward target at 0.06. Apply `rotation.y += pointerLerp.x * 0.18`, `rotation.x += pointerLerp.y * 0.12`. About: replaces direct rotation. Why: composed with existing `tiltX/tiltY` scroll-driven values.
+  - **Vertical bob**: `position.y = sin(t*0.7) * 0.04` (About: from 0; Why: from 0.05 baseline). Tiny amplitude — reads as floating without shifting layout.
+  - **EnvMap shimmer**: meshes collected into `meshesRef` during material setup. Each frame, `material.envMapIntensity = base + sin(t*0.6) * amp` (About: 1.3 ±0.15; Why: 0.8 ±0.18). Reflections breathe.
+  - **Drop-in entrance attempt**: cubic-out drop from `y=+4.5` to baseline, gated by `aboutSectionState.active`/`whySectionState.active`, was implemented but reverted by user. Not currently active.
+- [x] **framer-motion installed** (`npm install framer-motion --legacy-peer-deps`). `EdgeScrollGallery.tsx` component built ([app/components/EdgeScrollGallery.tsx](app/components/EdgeScrollGallery.tsx)) — 400vh outer, sticky 100vh inner, top 3-grid with cross-fade/scale-up via `useScroll`/`useTransform`, bottom ribbon with `perspective(1200px) rotateX(20deg)`, `transformStyle:preserve-3d`, x animated `['-10%','-60%']`. **Not wired into route** — `collections.$handle.tsx` reverted to bare Hydrogen state. Component is unused but available.
 
 ## Phase 3: Inner Pages [NOT STARTED]
 ## Phase 4: Polish and Launch [NOT STARTED]

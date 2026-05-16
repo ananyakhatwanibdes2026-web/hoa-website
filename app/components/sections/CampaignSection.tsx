@@ -73,8 +73,8 @@ export default function CampaignSection() {
         campaignSectionState.active = self.isActive;
         campaignSectionState.sectionProgress = self.progress;
         const sp = self.progress;
-        // Widened exit ramp (was 0.95→1.0) so Campaign dissolves into Lookbook over ~75vh instead of 25vh.
-        const envelope = smoothstep(0, 0.08, sp) * (1 - smoothstep(0.85, 1, sp));
+        // Wide crossfade: ~125vh at each join so Campaign blends into neighbours.
+        const envelope = smoothstep(0, 0.22, sp) * (1 - smoothstep(0.72, 1, sp));
         if (visualRef.current) {
           visualRef.current.style.opacity = envelope.toFixed(3);
         }

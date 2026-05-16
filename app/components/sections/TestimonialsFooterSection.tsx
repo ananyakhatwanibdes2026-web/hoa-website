@@ -14,6 +14,7 @@ const CARD_CONFIGS: CardConfig[] = [
     quote: 'Got so many compliments at the party. People thought it was Tiffany!',
     author: 'Shreya M.',
     stars: 5,
+    image: '/testimonial1.JPG',
     tapeColor:
       'linear-gradient(135deg, rgba(140,165,225,0.58) 0%, rgba(100,132,210,0.42) 60%, rgba(140,165,225,0.58) 100%)',
     x: -320,
@@ -23,6 +24,7 @@ const CARD_CONFIGS: CardConfig[] = [
     quote: 'The packaging alone made me feel like royalty. The ring? Even better.',
     author: 'Priya K.',
     stars: 5,
+    image: '/testimonial2.JPG',
     tapeColor:
       'linear-gradient(135deg, rgba(160,178,238,0.55) 0%, rgba(118,142,222,0.40) 60%, rgba(160,178,238,0.55) 100%)',
     x: -160,
@@ -32,6 +34,7 @@ const CARD_CONFIGS: CardConfig[] = [
     quote: 'Wore it every day for 3 months and it still looks brand new. Obsessed.',
     author: 'Ananya R.',
     stars: 5,
+    image: '/testimonial3.JPG',
     tapeColor:
       'linear-gradient(135deg, rgba(115,142,215,0.56) 0%, rgba(88,118,202,0.42) 60%, rgba(115,142,215,0.56) 100%)',
     x: 0,
@@ -41,6 +44,7 @@ const CARD_CONFIGS: CardConfig[] = [
     quote: 'Literally the most beautiful thing I own. Worth every rupee.',
     author: 'Meera S.',
     stars: 5,
+    image: '/testimonial4.JPG',
     tapeColor:
       'linear-gradient(135deg, rgba(160,178,238,0.55) 0%, rgba(118,142,222,0.40) 60%, rgba(160,178,238,0.55) 100%)',
     x: 160,
@@ -50,6 +54,7 @@ const CARD_CONFIGS: CardConfig[] = [
     quote: 'Finally found jewellery that matches my energy. Bold, elegant, alive.',
     author: 'Divya P.',
     stars: 5,
+    image: '/testimonial5.JPG',
     tapeColor:
       'linear-gradient(135deg, rgba(140,165,225,0.58) 0%, rgba(100,132,210,0.42) 60%, rgba(140,165,225,0.58) 100%)',
     x: 320,
@@ -104,12 +109,12 @@ export default function TestimonialsFooterSection() {
         });
       }
 
-      // ── Subtext slides in from the right ──────────────────────────────────
+      // ── Subtext rises in from below ───────────────────────────────────────
       const subtext = section.querySelector<HTMLElement>('.tf-subtext');
       if (subtext) {
-        gsap.set(subtext, {x: 36, opacity: 0});
+        gsap.set(subtext, {y: 32, opacity: 0});
         gsap.to(subtext, {
-          x: 0,
+          y: 0,
           opacity: 1,
           duration: 0.85,
           ease: 'power2.out',

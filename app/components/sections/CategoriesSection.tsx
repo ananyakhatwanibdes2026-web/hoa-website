@@ -15,7 +15,7 @@ const PANELS = [
     name: 'Edge',
     tagline: 'Minimal Aggression',
     imgSrc: '/images/categories/edge1.jpg',
-    href: '/collections/edge',
+    href: '/shop#edge',
     cta: 'Shop Edge',
   },
   {
@@ -23,7 +23,7 @@ const PANELS = [
     name: 'Sculpt',
     tagline: 'Form Meets the Ear',
     imgSrc: '/images/categories/sculpt2.jpg',
-    href: '/collections/sculpt',
+    href: '/shop#sculpt',
     cta: 'Shop Sculpt',
   },
   {
@@ -31,7 +31,7 @@ const PANELS = [
     name: 'Elite',
     tagline: 'Sculpted in Gold',
     imgSrc: '/images/categories/elite3.jpg',
-    href: '/collections/elite',
+    href: '/shop#elite',
     cta: 'Shop Elite',
   },
 ];
@@ -48,17 +48,17 @@ export default function CategoriesSection() {
   // GSAP scroll animations
   useEffect(() => {
     const ctx = gsap.context(() => {
-      gsap.set(cardRefs.current[0], {x: -100, y: 70, opacity: 0});
+      gsap.set(cardRefs.current[0], {x: 0, y: 80, opacity: 0});
       gsap.set(cardRefs.current[1], {x: 0, y: 90, opacity: 0});
-      gsap.set(cardRefs.current[2], {x: 100, y: 70, opacity: 0});
+      gsap.set(cardRefs.current[2], {x: 0, y: 80, opacity: 0});
       gsap.set(headingRef.current,  {opacity: 0, y: 22});
 
       const tl = gsap.timeline({paused: true});
 
-      // Phase 1 (0 -> 1.0): Cards enter from sides/below -- one full viewport height of scroll
-      tl.to(cardRefs.current[0], {x: 0, y: 0, opacity: 1, ease: 'power3.out', duration: 1.0},  0)
-        .to(cardRefs.current[1], {x: 0, y: 0, opacity: 1, ease: 'power3.out', duration: 0.90}, 0.12)
-        .to(cardRefs.current[2], {x: 0, y: 0, opacity: 1, ease: 'power3.out', duration: 0.80}, 0.24);
+      // Phase 1 (0 -> 1.0): Cards rise from below in stagger -- unified bottom->up entrance
+      tl.to(cardRefs.current[0], {y: 0, opacity: 1, ease: 'power3.out', duration: 1.0},  0)
+        .to(cardRefs.current[1], {y: 0, opacity: 1, ease: 'power3.out', duration: 0.90}, 0.12)
+        .to(cardRefs.current[2], {y: 0, opacity: 1, ease: 'power3.out', duration: 0.80}, 0.24);
 
       // Phase 1b (0.10 -> 0.55): Heading fades in as cards enter
       tl.to(headingRef.current, {opacity: 1, y: 0, ease: 'power2.out', duration: 0.45}, 0.10);
@@ -68,15 +68,15 @@ export default function CategoriesSection() {
         .to(cardRefs.current[1], {y: -6,  ease: 'none', duration: 0.40}, 1.0)
         .to(cardRefs.current[2], {y: -12, ease: 'none', duration: 0.40}, 1.0);
 
-      // Phase 3a (1.4 -> 2.0): Edge (left) launches off to the left
-      tl.to(cardRefs.current[0], {x: -300, y: -40, opacity: 0, ease: 'power2.in', duration: 0.6}, 1.4);
+      // Phase 3a (1.4 -> 2.0): Edge (left) lifts up and out
+      tl.to(cardRefs.current[0], {y: -220, opacity: 0, ease: 'power2.in', duration: 0.6}, 1.4);
 
-      // Phase 3b (2.0 -> 2.6): Sculpt (center) launches straight up; heading exits with it
+      // Phase 3b (2.0 -> 2.6): Sculpt (center) lifts up and out; heading exits with it
       tl.to(cardRefs.current[1], {y: -220, opacity: 0, ease: 'power2.in', duration: 0.6}, 2.0)
         .to(headingRef.current,  {opacity: 0, y: -25, ease: 'power2.in', duration: 0.45}, 2.1);
 
-      // Phase 3c (2.6 -> 3.2): Elite (right) launches off to the right
-      tl.to(cardRefs.current[2], {x: 300, y: -40, opacity: 0, ease: 'power2.in', duration: 0.6}, 2.6);
+      // Phase 3c (2.6 -> 3.2): Elite (right) lifts up and out
+      tl.to(cardRefs.current[2], {y: -220, opacity: 0, ease: 'power2.in', duration: 0.6}, 2.6);
 
       ScrollTrigger.create({
         trigger: sectionRef.current,
